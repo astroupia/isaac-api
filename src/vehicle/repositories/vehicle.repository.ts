@@ -86,4 +86,13 @@ export class VehicleRepository {
       .populate('passengers')
       .exec();
   }
+
+  async findByIds(ids: string[]): Promise<VehicleDocument[]> {
+    const objectIds = ids.map((id) => this.convertToObjectId(id));
+    return this.vehicleModel
+      .find({ _id: { $in: objectIds } })
+      .populate('driver')
+      .populate('passengers')
+      .exec();
+  }
 }

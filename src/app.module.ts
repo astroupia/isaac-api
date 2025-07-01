@@ -8,6 +8,7 @@ import { IncidentModule } from './incident/incident.module';
 import { ReportModule } from './report/report.module';
 import { EvidenceModule } from './evidence/evidence.module';
 import { VehicleModule } from './vehicle/vehicle.module';
+import { PersonModule } from './person/person.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { VehicleModule } from './vehicle/vehicle.module';
     ReportModule,
     EvidenceModule,
     VehicleModule,
+    PersonModule,
     CloudinaryModule,
   ],
   controllers: [CloudinaryController],

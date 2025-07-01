@@ -39,4 +39,9 @@ export class VehicleController {
   findAll() {
     return this.vehicleService.findAll();
   }
+
+  @Get('incident/:incidentId')
+  getByIncidentId(@Param('incidentId') incidentId: string) {
+    return this.vehicleService.findByIncidentId(incidentId);
+  }
 }
