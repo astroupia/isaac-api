@@ -1,18 +1,25 @@
 import { Types } from 'mongoose';
 
 export enum ReportStatus {
-  DRAFT = 'draft',
-  SUBMITTED = 'submitted',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  PUBLISHED = 'published',
+  DRAFT = 'Draft',
+  SUBMITTED = 'Submitted',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
+  PUBLISHED = 'Published',
+  NEEDS_REVIEW = 'Needs Review',
 }
 
 export enum ReportType {
-  INCIDENT = 'incident',
-  INVESTIGATION = 'investigation',
-  ANALYSIS = 'analysis',
-  SUMMARY = 'summary',
+  INCIDENT = 'Incident',
+  INVESTIGATION = 'Investigation',
+  ANALYSIS = 'Analysis',
+  SUMMARY = 'Summary',
+}
+
+export enum ReportPriority {
+  HIGH = 'High Priority',
+  MEDIUM = 'Medium Priority',
+  LOW = 'Low Priority',
 }
 
 export interface IReport {
@@ -20,6 +27,7 @@ export interface IReport {
   title: string;
   type: ReportType;
   status: ReportStatus;
+  priority: ReportPriority;
   createdBy: Types.ObjectId;
   assignedTo?: Types.ObjectId;
   approvedBy?: Types.ObjectId;
@@ -29,6 +37,9 @@ export interface IReport {
   approvedAt?: Date;
   content?: Record<string, any>;
   aiContribution?: number;
+  aiOverallConfidence?: number;
+  aiObjectDetection?: number;
+  aiSceneReconstruction?: number;
   comments?: any[];
   revisionHistory?: any[];
   relatedReports?: Types.ObjectId[];

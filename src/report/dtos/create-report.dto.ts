@@ -6,7 +6,9 @@ import {
   IsDateString,
   IsNumber,
   IsObject,
+  IsEnum,
 } from 'class-validator';
+import { ReportPriority, ReportStatus, ReportType } from '../../types/report';
 
 export class CreateReportDto {
   @IsString()
@@ -17,13 +19,17 @@ export class CreateReportDto {
   @IsNotEmpty()
   title: string;
 
-  @IsString()
+  @IsEnum(ReportType)
   @IsNotEmpty()
-  type: string;
+  type: ReportType;
 
-  @IsString()
+  @IsEnum(ReportStatus)
   @IsNotEmpty()
-  status: string;
+  status: ReportStatus;
+
+  @IsEnum(ReportPriority)
+  @IsNotEmpty()
+  priority: ReportPriority;
 
   @IsString()
   @IsNotEmpty()
@@ -60,6 +66,18 @@ export class CreateReportDto {
   @IsNumber()
   @IsOptional()
   aiContribution?: number;
+
+  @IsNumber()
+  @IsOptional()
+  aiOverallConfidence?: number;
+
+  @IsNumber()
+  @IsOptional()
+  aiObjectDetection?: number;
+
+  @IsNumber()
+  @IsOptional()
+  aiSceneReconstruction?: number;
 
   @IsArray()
   @IsOptional()

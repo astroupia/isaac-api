@@ -103,4 +103,15 @@ export class ReportRepository {
       .populate('relatedReports')
       .exec();
   }
+
+  async findByIncidentId(incidentId: string): Promise<ReportDocument[]> {
+    return this.reportModel
+      .find({ incidentId: this.convertToObjectId(incidentId) })
+      .populate('incidentId')
+      .populate('createdBy')
+      .populate('assignedTo')
+      .populate('approvedBy')
+      .populate('relatedReports')
+      .exec();
+  }
 }

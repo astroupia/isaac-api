@@ -34,4 +34,9 @@ export class ReportController {
   delete(@Param('id') id: string) {
     return this.reportService.delete(id);
   }
+
+  @Get('incident/:incidentId')
+  getByIncidentId(@Param('incidentId') incidentId: string) {
+    return this.reportService.findByIncidentId(incidentId);
+  }
 }

@@ -42,4 +42,8 @@ export class ReportService {
   async delete(id: string) {
     return this.reportRepo.delete(id);
   }
+
+  async findByIncidentId(incidentId: string) {
+    return this.reportRepo.findByIncidentId(incidentId);
+  }
 }
