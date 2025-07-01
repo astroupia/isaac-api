@@ -34,4 +34,9 @@ export class EvidenceController {
   delete(@Param('id') id: string) {
     return this.evidenceService.delete(id);
   }
+
+  @Get('incident/:incidentId')
+  getByIncidentId(@Param('incidentId') incidentId: string) {
+    return this.evidenceService.findByIncidentId(incidentId);
+  }
 }

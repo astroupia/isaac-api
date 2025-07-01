@@ -3,10 +3,14 @@ import { EvidenceRepository } from '../repositories/evidence.repository';
 import { CreateEvidenceDto } from '../dtos/create-evidence.dto';
 import { UpdateEvidenceDto } from '../dtos/update-evidence.dto';
 import { Types } from 'mongoose';
+import { IncidentService } from '../../incident/services/incident.service';
 
 @Injectable()
 export class EvidenceService {
-  constructor(private readonly evidenceRepo: EvidenceRepository) {}
+  constructor(
+    private readonly evidenceRepo: EvidenceRepository,
+    private readonly incidentService: IncidentService,
+  ) {}
 
   async create(dto: CreateEvidenceDto) {
     return this.evidenceRepo.create(dto);
@@ -35,5 +39,15 @@ export class EvidenceService {
 
   async delete(id: string) {
     return this.evidenceRepo.delete(id);
+  }
+
+  async findByIncidentId(incidentId: string) {
+    const incident = await this.incidentService.findById(incidentId);
+    if (!incident.evidenceIds || incident.evidenceIds.length === 0) {
+      return [];
+    }
+
+    const evidenceIds = incident.evidenceIds.map((id) => id.toString());
+    return this.evidenceRepo.findByIds(evidenceIds);
   }
 }

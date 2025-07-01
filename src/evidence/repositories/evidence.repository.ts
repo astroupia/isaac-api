@@ -91,4 +91,12 @@ export class EvidenceRepository {
   async findAll(): Promise<EvidenceDocument[]> {
     return this.evidenceModel.find().populate('uploadedBy').exec();
   }
+
+  async findByIds(ids: string[]): Promise<EvidenceDocument[]> {
+    const objectIds = ids.map((id) => this.convertToObjectId(id));
+    return this.evidenceModel
+      .find({ _id: { $in: objectIds } })
+      .populate('uploadedBy')
+      .exec();
+  }
 }

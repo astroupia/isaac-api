@@ -6,7 +6,6 @@ export enum EvidenceType {
   DOCUMENT = 'document',
   AUDIO = 'audio',
   WITNESS_STATEMENT = 'witness_statement',
-  PHYSICAL_EVIDENCE = 'physical_evidence',
   OTHER = 'other',
 }
 
