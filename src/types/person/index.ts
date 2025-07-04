@@ -27,7 +27,7 @@ export enum PersonGender {
 export interface IPerson {
   firstName: string;
   lastName: string;
-  dateOfBirth: Date;
+  age: Date;
   gender: PersonGender;
   role: PersonRole;
   status: PersonStatus;

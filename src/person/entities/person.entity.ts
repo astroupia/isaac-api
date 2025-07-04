@@ -6,7 +6,7 @@ import { PersonRole, PersonStatus, PersonGender } from '../../types/person';
 export class Person {
   firstName: string;
   lastName: string;
-  dateOfBirth: Date;
+  age: Date;
   gender: PersonGender;
   role: PersonRole;
   status: PersonStatus;
@@ -31,7 +31,7 @@ export class Person {
 export class PersonSchemaClass {
   @Prop({ required: true }) firstName: string;
   @Prop({ required: true }) lastName: string;
-  @Prop({ required: true }) dateOfBirth: Date;
+  @Prop({ required: true }) age: number;
   @Prop({ required: true, enum: PersonGender }) gender: PersonGender;
   @Prop({ required: true, enum: PersonRole }) role: PersonRole;
   @Prop({ required: true, enum: PersonStatus }) status: PersonStatus;

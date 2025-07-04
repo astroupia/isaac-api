@@ -3,13 +3,12 @@ import {
   IsNotEmpty,
   IsOptional,
   IsArray,
-  IsDateString,
   IsEnum,
   IsEmail,
   ValidateNested,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Types } from 'mongoose';
 import { PersonRole, PersonStatus, PersonGender } from '../../types/person';
 
 class EmergencyContactDto {
@@ -35,9 +34,9 @@ export class CreatePersonDto {
   @IsNotEmpty()
   lastName: string;
 
-  @IsDateString()
+  @IsNumber()
   @IsNotEmpty()
-  dateOfBirth: Date;
+  age: Date;
 
   @IsEnum(PersonGender)
   @IsNotEmpty()
