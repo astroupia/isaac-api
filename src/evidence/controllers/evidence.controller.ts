@@ -11,7 +11,7 @@ import { EvidenceService } from '../services/evidence.service';
 import { CreateEvidenceDto } from '../dtos/create-evidence.dto';
 import { UpdateEvidenceDto } from '../dtos/update-evidence.dto';
 
-@Controller('evidence')
+@Controller('evidences')
 export class EvidenceController {
   constructor(private readonly evidenceService: EvidenceService) {}
 

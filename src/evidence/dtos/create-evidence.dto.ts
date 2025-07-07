@@ -7,7 +7,6 @@ import {
   IsBoolean,
   IsObject,
 } from 'class-validator';
-import { Types } from 'mongoose';
 
 export class CreateEvidenceDto {
   @IsString()
@@ -64,7 +63,7 @@ export class CreateEvidenceDto {
   @IsObject()
   @IsOptional()
   relatedTo?: {
-    vehicleIds?: Types.ObjectId[];
-    personIds?: Types.ObjectId[];
+    vehicleIds?: string[];
+    personIds?: string[];
   };
 }

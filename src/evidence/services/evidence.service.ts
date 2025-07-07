@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { EvidenceRepository } from '../repositories/evidence.repository';
 import { CreateEvidenceDto } from '../dtos/create-evidence.dto';
 import { UpdateEvidenceDto } from '../dtos/update-evidence.dto';
-import { Types } from 'mongoose';
 import { IncidentService } from '../../incident/services/incident.service';
 
 @Injectable()
@@ -25,20 +24,8 @@ export class EvidenceService {
   }
 
   async update(id: string, dto: UpdateEvidenceDto) {
-    // Convert string IDs to ObjectId where needed
-    const updateData: any = { ...dto };
-    if (dto.uploadedBy) {
-      updateData.uploadedBy = new Types.ObjectId(dto.uploadedBy);
-    }
-    if (dto.relatedTo) {
-      updateData.relatedTo = {
-        vehicleIds: dto.relatedTo.vehicleIds?.map(
-          (id) => new Types.ObjectId(id),
-        ),
-        personIds: dto.relatedTo.personIds?.map((id) => new Types.ObjectId(id)),
-      };
-    }
-    return this.evidenceRepo.update(id, updateData);
+    // Repository handles string to ObjectId conversion
+    return this.evidenceRepo.update(id, dto);
   }
 
   async delete(id: string) {
