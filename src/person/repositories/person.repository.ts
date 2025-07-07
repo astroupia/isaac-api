@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PersonSchemaClass, PersonDocument } from '../entities/person.entity';
@@ -12,7 +16,13 @@ export class PersonRepository {
   ) {}
 
   private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    return typeof id === 'string' ? new Types.ObjectId(id) : id;
+    if (typeof id === 'string') {
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+      }
+      return new Types.ObjectId(id);
+    }
+    return id;
   }
 
   private convertArrayToObjectIds(
@@ -22,16 +32,32 @@ export class PersonRepository {
   }
 
   async create(createPersonDto: CreatePersonDto): Promise<PersonDocument> {
-    const person = new this.personModel({
-      ...createPersonDto,
-      incidentIds: this.convertArrayToObjectIds(createPersonDto.incidentIds),
-      vehicleIds: this.convertArrayToObjectIds(createPersonDto.vehicleIds),
-      evidenceIds: this.convertArrayToObjectIds(createPersonDto.evidenceIds),
-    });
-    return await person.save();
+    try {
+      const person = new this.personModel({
+        ...createPersonDto,
+        incidentIds: this.convertArrayToObjectIds(createPersonDto.incidentIds),
+        vehicleIds: this.convertArrayToObjectIds(createPersonDto.vehicleIds),
+        evidenceIds: this.convertArrayToObjectIds(createPersonDto.evidenceIds),
+      });
+      return await person.save();
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(
+          (err: any) => err.message,
+        );
+        throw new BadRequestException(
+          `Validation failed: ${messages.join(', ')}`,
+        );
+      }
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<PersonDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+    }
+
     const person = await this.personModel
       .findById(id)
       .populate('incidentIds')
@@ -46,34 +72,54 @@ export class PersonRepository {
 
   async update(
     id: string,
-    updateData: Partial<PersonSchemaClass>,
+    updateData: Partial<CreatePersonDto>,
   ): Promise<PersonDocument> {
-    const dataToUpdate = { ...updateData };
-    if (updateData.incidentIds) {
-      dataToUpdate.incidentIds = this.convertArrayToObjectIds(
-        updateData.incidentIds,
-      );
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
     }
-    if (updateData.vehicleIds) {
-      dataToUpdate.vehicleIds = this.convertArrayToObjectIds(
-        updateData.vehicleIds,
-      );
+
+    try {
+      const dataToUpdate: any = { ...updateData };
+      if (updateData.incidentIds) {
+        dataToUpdate.incidentIds = this.convertArrayToObjectIds(
+          updateData.incidentIds,
+        );
+      }
+      if (updateData.vehicleIds) {
+        dataToUpdate.vehicleIds = this.convertArrayToObjectIds(
+          updateData.vehicleIds,
+        );
+      }
+      if (updateData.evidenceIds) {
+        dataToUpdate.evidenceIds = this.convertArrayToObjectIds(
+          updateData.evidenceIds,
+        );
+      }
+      const person = await this.personModel
+        .findByIdAndUpdate(id, dataToUpdate, { new: true })
+        .exec();
+      if (!person) {
+        throw new NotFoundException(`Person with ID ${id} not found`);
+      }
+      return person;
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(
+          (err: any) => err.message,
+        );
+        throw new BadRequestException(
+          `Validation failed: ${messages.join(', ')}`,
+        );
+      }
+      throw error;
     }
-    if (updateData.evidenceIds) {
-      dataToUpdate.evidenceIds = this.convertArrayToObjectIds(
-        updateData.evidenceIds,
-      );
-    }
-    const person = await this.personModel
-      .findByIdAndUpdate(id, dataToUpdate, { new: true })
-      .exec();
-    if (!person) {
-      throw new NotFoundException(`Person with ID ${id} not found`);
-    }
-    return person;
   }
 
   async delete(id: string): Promise<PersonDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+    }
+
     const person = await this.personModel.findByIdAndDelete(id).exec();
     if (!person) {
       throw new NotFoundException(`Person with ID ${id} not found`);
@@ -91,6 +137,10 @@ export class PersonRepository {
   }
 
   async findByIncidentId(incidentId: string): Promise<PersonDocument[]> {
+    if (!Types.ObjectId.isValid(incidentId)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${incidentId}`);
+    }
+
     return this.personModel
       .find({ incidentIds: this.convertToObjectId(incidentId) })
       .populate('incidentIds')

@@ -36,7 +36,7 @@ export class CreatePersonDto {
 
   @IsNumber()
   @IsNotEmpty()
-  age: Date;
+  age: number;
 
   @IsEnum(PersonGender)
   @IsNotEmpty()

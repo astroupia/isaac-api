@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PersonRepository } from '../repositories/person.repository';
 import { CreatePersonDto } from '../dtos/create-person.dto';
 import { UpdatePersonDto } from '../dtos/update-person.dto';
-import { Types } from 'mongoose';
 
 @Injectable()
 export class PersonService {
@@ -21,24 +20,8 @@ export class PersonService {
   }
 
   async update(id: string, dto: UpdatePersonDto) {
-    // Convert string IDs to ObjectId where needed
-    const updateData: any = { ...dto };
-    if (dto.incidentIds) {
-      updateData.incidentIds = dto.incidentIds.map(
-        (id) => new Types.ObjectId(id),
-      );
-    }
-    if (dto.vehicleIds) {
-      updateData.vehicleIds = dto.vehicleIds.map(
-        (id) => new Types.ObjectId(id),
-      );
-    }
-    if (dto.evidenceIds) {
-      updateData.evidenceIds = dto.evidenceIds.map(
-        (id) => new Types.ObjectId(id),
-      );
-    }
-    return this.personRepo.update(id, updateData);
+    // Repository handles string to ObjectId conversion
+    return this.personRepo.update(id, dto);
   }
 
   async delete(id: string) {
