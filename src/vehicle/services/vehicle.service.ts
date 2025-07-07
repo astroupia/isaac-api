@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { VehicleRepository } from '../repositories/vehicle.repository';
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
-import { VehicleSchemaClass } from '../entities/vehicle.entity';
+import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
 import { IncidentService } from '../../incident/services/incident.service';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class VehicleService {
     return this.vehicleRepo.findById(id);
   }
 
-  update(id: string, dto: Partial<VehicleSchemaClass>) {
+  update(id: string, dto: UpdateVehicleDto) {
     return this.vehicleRepo.update(id, dto);
   }
 

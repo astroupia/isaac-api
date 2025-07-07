@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ReportSchemaClass, ReportDocument } from '../entities/report.entity';
@@ -12,7 +16,13 @@ export class ReportRepository {
   ) {}
 
   private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    return typeof id === 'string' ? new Types.ObjectId(id) : id;
+    if (typeof id === 'string') {
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+      }
+      return new Types.ObjectId(id);
+    }
+    return id;
   }
 
   private convertArrayToObjectIds(
@@ -22,24 +32,40 @@ export class ReportRepository {
   }
 
   async create(createReportDto: CreateReportDto): Promise<ReportDocument> {
-    const report = new this.reportModel({
-      ...createReportDto,
-      incidentId: this.convertToObjectId(createReportDto.incidentId),
-      createdBy: this.convertToObjectId(createReportDto.createdBy),
-      assignedTo: createReportDto.assignedTo
-        ? this.convertToObjectId(createReportDto.assignedTo)
-        : undefined,
-      approvedBy: createReportDto.approvedBy
-        ? this.convertToObjectId(createReportDto.approvedBy)
-        : undefined,
-      relatedReports: this.convertArrayToObjectIds(
-        createReportDto.relatedReports,
-      ),
-    });
-    return await report.save();
+    try {
+      const report = new this.reportModel({
+        ...createReportDto,
+        incidentId: this.convertToObjectId(createReportDto.incidentId),
+        createdBy: this.convertToObjectId(createReportDto.createdBy),
+        assignedTo: createReportDto.assignedTo
+          ? this.convertToObjectId(createReportDto.assignedTo)
+          : undefined,
+        approvedBy: createReportDto.approvedBy
+          ? this.convertToObjectId(createReportDto.approvedBy)
+          : undefined,
+        relatedReports: this.convertArrayToObjectIds(
+          createReportDto.relatedReports,
+        ),
+      });
+      return await report.save();
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(
+          (err: any) => err.message,
+        );
+        throw new BadRequestException(
+          `Validation failed: ${messages.join(', ')}`,
+        );
+      }
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<ReportDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+    }
+
     const report = await this.reportModel
       .findById(id)
       .populate('incidentId')
@@ -56,36 +82,56 @@ export class ReportRepository {
 
   async update(
     id: string,
-    updateData: Partial<ReportSchemaClass>,
+    updateData: Partial<CreateReportDto>,
   ): Promise<ReportDocument> {
-    const dataToUpdate = { ...updateData };
-    if (updateData.incidentId) {
-      dataToUpdate.incidentId = this.convertToObjectId(updateData.incidentId);
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
     }
-    if (updateData.createdBy) {
-      dataToUpdate.createdBy = this.convertToObjectId(updateData.createdBy);
+
+    try {
+      const dataToUpdate: any = { ...updateData };
+      if (updateData.incidentId) {
+        dataToUpdate.incidentId = this.convertToObjectId(updateData.incidentId);
+      }
+      if (updateData.createdBy) {
+        dataToUpdate.createdBy = this.convertToObjectId(updateData.createdBy);
+      }
+      if (updateData.assignedTo) {
+        dataToUpdate.assignedTo = this.convertToObjectId(updateData.assignedTo);
+      }
+      if (updateData.approvedBy) {
+        dataToUpdate.approvedBy = this.convertToObjectId(updateData.approvedBy);
+      }
+      if (updateData.relatedReports) {
+        dataToUpdate.relatedReports = this.convertArrayToObjectIds(
+          updateData.relatedReports,
+        );
+      }
+      const report = await this.reportModel
+        .findByIdAndUpdate(id, dataToUpdate, { new: true })
+        .exec();
+      if (!report) {
+        throw new NotFoundException(`Report with ID ${id} not found`);
+      }
+      return report;
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(
+          (err: any) => err.message,
+        );
+        throw new BadRequestException(
+          `Validation failed: ${messages.join(', ')}`,
+        );
+      }
+      throw error;
     }
-    if (updateData.assignedTo) {
-      dataToUpdate.assignedTo = this.convertToObjectId(updateData.assignedTo);
-    }
-    if (updateData.approvedBy) {
-      dataToUpdate.approvedBy = this.convertToObjectId(updateData.approvedBy);
-    }
-    if (updateData.relatedReports) {
-      dataToUpdate.relatedReports = this.convertArrayToObjectIds(
-        updateData.relatedReports,
-      );
-    }
-    const report = await this.reportModel
-      .findByIdAndUpdate(id, dataToUpdate, { new: true })
-      .exec();
-    if (!report) {
-      throw new NotFoundException(`Report with ID ${id} not found`);
-    }
-    return report;
   }
 
   async delete(id: string): Promise<ReportDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+    }
+
     const report = await this.reportModel.findByIdAndDelete(id).exec();
     if (!report) {
       throw new NotFoundException(`Report with ID ${id} not found`);
@@ -105,6 +151,10 @@ export class ReportRepository {
   }
 
   async findByIncidentId(incidentId: string): Promise<ReportDocument[]> {
+    if (!Types.ObjectId.isValid(incidentId)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${incidentId}`);
+    }
+
     return this.reportModel
       .find({ incidentId: this.convertToObjectId(incidentId) })
       .populate('incidentId')

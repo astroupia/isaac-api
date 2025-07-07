@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { VehicleService } from '../services/vehicle.service';
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
-import { VehicleSchemaClass } from '../entities/vehicle.entity';
+import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
 
 @Controller('vehicles')
 export class VehicleController {
@@ -26,7 +26,7 @@ export class VehicleController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<VehicleSchemaClass>) {
+  update(@Param('id') id: string, @Body() dto: UpdateVehicleDto) {
     return this.vehicleService.update(id, dto);
   }
 
