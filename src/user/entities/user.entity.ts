@@ -54,6 +54,7 @@ export class UserSchemaClass {
     unique: true,
     lowercase: true,
     trim: true,
+    index: true,
   })
   email: string;
 
@@ -63,10 +64,11 @@ export class UserSchemaClass {
   @Prop({
     required: true,
     enum: ['traffic', 'investigator', 'chief', 'admin'],
+    index: true,
   })
   role: UserRole;
 
-  @Prop({ unique: true, sparse: true, trim: true })
+  @Prop({ unique: true, sparse: true, trim: true, index: true })
   badgeId?: string;
 
   @Prop({ trim: true })
@@ -78,7 +80,7 @@ export class UserSchemaClass {
   @Prop({ trim: true })
   phoneNumber?: string;
 
-  @Prop({ default: true })
+  @Prop({ default: true, index: true })
   isActive: boolean;
 
   @Prop()
@@ -138,9 +140,3 @@ export type UserDocument = UserSchemaClass & Document;
 UserSchema.virtual('displayName').get(function () {
   return `${this.firstName} ${this.lastName}`.trim();
 });
-
-// Indexes for performance
-UserSchema.index({ email: 1 });
-UserSchema.index({ badgeId: 1 });
-UserSchema.index({ role: 1 });
-UserSchema.index({ isActive: 1 });
