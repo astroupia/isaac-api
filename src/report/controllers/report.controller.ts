@@ -20,6 +20,11 @@ export class ReportController {
     return this.reportService.create(dto);
   }
 
+  @Get()
+  findAll() {
+    return this.reportService.findAll();
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.reportService.findById(id);

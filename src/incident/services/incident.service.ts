@@ -16,6 +16,10 @@ export class IncidentService {
     return this.incidentRepo.findById(id);
   }
 
+  async findAll() {
+    return this.incidentRepo.findAll();
+  }
+
   async update(id: string, dto: UpdateIncidentDto) {
     // Convert string IDs to ObjectId where needed
     const updateData: any = { ...dto };

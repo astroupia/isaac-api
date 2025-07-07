@@ -16,6 +16,10 @@ export class ReportService {
     return this.reportRepo.findById(id);
   }
 
+  async findAll() {
+    return this.reportRepo.findAll();
+  }
+
   async update(id: string, dto: UpdateReportDto) {
     // Convert string IDs to ObjectId where needed
     const updateData: any = { ...dto };

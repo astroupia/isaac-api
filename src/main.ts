@@ -24,9 +24,8 @@ async function bootstrap(): Promise<void> {
     },
     credentials: true,
   });
-
-  await app.listen(3000);
-  console.log(`Application is running on port 3000`);
+  await app.listen(8000);
+  console.log(`Application is running on port 8000`);
 }
 
 bootstrap().catch((err) => {

@@ -20,6 +20,10 @@ export class EvidenceService {
     return this.evidenceRepo.findById(id);
   }
 
+  async findAll() {
+    return this.evidenceRepo.findAll();
+  }
+
   async update(id: string, dto: UpdateEvidenceDto) {
     // Convert string IDs to ObjectId where needed
     const updateData: any = { ...dto };

@@ -16,6 +16,10 @@ export class PersonService {
     return this.personRepo.findById(id);
   }
 
+  async findAll() {
+    return this.personRepo.findAll();
+  }
+
   async update(id: string, dto: UpdatePersonDto) {
     // Convert string IDs to ObjectId where needed
     const updateData: any = { ...dto };

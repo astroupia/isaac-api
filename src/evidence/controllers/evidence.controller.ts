@@ -20,6 +20,11 @@ export class EvidenceController {
     return this.evidenceService.create(dto);
   }
 
+  @Get()
+  findAll() {
+    return this.evidenceService.findAll();
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.evidenceService.findById(id);

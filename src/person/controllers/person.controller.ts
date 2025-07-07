@@ -20,6 +20,11 @@ export class PersonController {
     return this.personService.create(dto);
   }
 
+  @Get()
+  findAll() {
+    return this.personService.findAll();
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.personService.findById(id);

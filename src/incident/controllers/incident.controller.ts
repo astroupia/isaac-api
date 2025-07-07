@@ -20,6 +20,11 @@ export class IncidentController {
     return this.incidentService.create(dto);
   }
 
+  @Get()
+  findAll() {
+    return this.incidentService.findAll();
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.incidentService.findById(id);
