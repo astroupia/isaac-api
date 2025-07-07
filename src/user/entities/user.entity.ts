@@ -3,46 +3,9 @@ import { Document, Types } from 'mongoose';
 
 export type UserRole = 'traffic' | 'investigator' | 'chief' | 'admin';
 
-// Domain entity
-export class User {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  role: UserRole;
-  badgeId?: string;
-  department?: string;
-  profileImageUrl?: string;
-  phoneNumber?: string;
-  isActive: boolean;
-  lastLogin?: Date;
-
-  // Traffic Personnel specific fields
-  district?: string;
-  vehicleId?: string;
-  shift?: 'morning' | 'afternoon' | 'night';
-  reportsSubmitted?: number;
-
-  // Investigator specific fields
-  specialization?: string[];
-  currentCaseload?: number;
-  maxCaseload?: number;
-  completedCases?: number;
-  averageResolutionTime?: number;
-
-  // Chief Analyst specific fields
-  subordinates?: Types.ObjectId[];
-  totalCasesManaged?: number;
-  analyticsAccess?: boolean;
-
-  // Admin specific fields
-  accessLevel?: number;
-  systemPermissions?: string[];
-}
-
 // Mongoose schema class
 @Schema({ timestamps: true })
-export class UserSchemaClass {
+export class User {
   @Prop({ required: true, trim: true, maxlength: 50 })
   firstName: string;
 
@@ -133,8 +96,8 @@ export class UserSchemaClass {
   systemPermissions?: string[];
 }
 
-export const UserSchema = SchemaFactory.createForClass(UserSchemaClass);
-export type UserDocument = UserSchemaClass & Document;
+export const UserSchema = SchemaFactory.createForClass(User);
+export type UserDocument = User & Document;
 
 // Simple virtual methods
 UserSchema.virtual('displayName').get(function () {

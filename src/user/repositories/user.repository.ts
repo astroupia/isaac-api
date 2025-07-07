@@ -1,22 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import {
-  UserSchemaClass,
-  UserDocument,
-  UserRole,
-} from '../entities/user.entity';
+import { User, UserDocument, UserRole } from '../entities/user.entity';
 import { CreateUserDto } from '../dtos/create-user.dto';
 
 @Injectable()
 export class UserRepository {
   constructor(
-    @InjectModel(UserSchemaClass.name)
+    @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {}
 
   private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    return typeof id === 'string' ? new Types.ObjectId(id) : id;
+    if (typeof id === 'string') {
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+      }
+      return new Types.ObjectId(id);
+    }
+    return id;
   }
 
   private convertArrayToObjectIds(
@@ -26,14 +32,30 @@ export class UserRepository {
   }
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
-    const user = new this.userModel({
-      ...createUserDto,
-      subordinates: this.convertArrayToObjectIds(createUserDto.subordinates),
-    });
-    return await user.save();
+    try {
+      const user = new this.userModel({
+        ...createUserDto,
+        subordinates: this.convertArrayToObjectIds(createUserDto.subordinates),
+      });
+      return await user.save();
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(
+          (err: any) => err.message,
+        );
+        throw new BadRequestException(
+          `Validation failed: ${messages.join(', ')}`,
+        );
+      }
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<UserDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+    }
+
     const user = await this.userModel
       .findById(id)
       .populate('subordinates')
@@ -69,27 +91,44 @@ export class UserRepository {
       .exec();
   }
 
-  async update(
-    id: string,
-    updateData: Partial<UserSchemaClass>,
-  ): Promise<UserDocument> {
-    const dataToUpdate = { ...updateData };
-    if (updateData.subordinates) {
-      dataToUpdate.subordinates = this.convertArrayToObjectIds(
-        updateData.subordinates,
-      );
+  async update(id: string, updateData: Partial<User>): Promise<UserDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
     }
-    const user = await this.userModel
-      .findByIdAndUpdate(id, dataToUpdate, { new: true })
-      .populate('subordinates')
-      .exec();
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+
+    try {
+      const dataToUpdate = { ...updateData };
+      if (updateData.subordinates) {
+        dataToUpdate.subordinates = this.convertArrayToObjectIds(
+          updateData.subordinates,
+        );
+      }
+      const user = await this.userModel
+        .findByIdAndUpdate(id, dataToUpdate, { new: true })
+        .populate('subordinates')
+        .exec();
+      if (!user) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+      return user;
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(
+          (err: any) => err.message,
+        );
+        throw new BadRequestException(
+          `Validation failed: ${messages.join(', ')}`,
+        );
+      }
+      throw error;
     }
-    return user;
   }
 
   async delete(id: string): Promise<UserDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${id}`);
+    }
+
     const user = await this.userModel.findByIdAndDelete(id).exec();
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
