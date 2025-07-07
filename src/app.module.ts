@@ -9,6 +9,7 @@ import { ReportModule } from './report/report.module';
 import { EvidenceModule } from './evidence/evidence.module';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { PersonModule } from './person/person.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PersonModule } from './person/person.module';
     EvidenceModule,
     VehicleModule,
     PersonModule,
+    UserModule,
     CloudinaryModule,
   ],
   controllers: [CloudinaryController],
