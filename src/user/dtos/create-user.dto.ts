@@ -10,7 +10,6 @@ import {
   Min,
   Max,
   MinLength,
-  Matches,
 } from 'class-validator';
 import { UserRole } from '../entities/user.entity';
 
@@ -50,9 +49,6 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^[+]?[1-9][\d]{0,15}$/, {
-    message: 'Please enter a valid phone number',
-  })
   phoneNumber?: string;
 
   @IsBoolean()

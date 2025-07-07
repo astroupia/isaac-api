@@ -2,8 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // Get port from environment variable or default to 8000
+  const port = process.env.PORT || 8000;
 
+  // Create app with memory optimization
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'], // Reduce logging in production
+  });
+
+  // Enable CORS
   app.enableCors({
     origin: (
       origin: string | undefined,
@@ -24,9 +31,24 @@ async function bootstrap(): Promise<void> {
     },
     credentials: true,
   });
-  await app.listen(8000);
-  console.log(`Application is running on port 8000`);
+
+  // Listen on the specified port
+  await app.listen(port, '0.0.0.0'); // Bind to all interfaces
+  console.log(`Application is running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 bootstrap().catch((err) => {
   console.error('Failed to start the application:', err);

@@ -41,11 +41,7 @@ export class User {
 }
 
 // Mongoose schema class
-@Schema({
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true },
-})
+@Schema({ timestamps: true })
 export class UserSchemaClass {
   @Prop({ required: true, trim: true, maxlength: 50 })
   firstName: string;
@@ -58,10 +54,6 @@ export class UserSchemaClass {
     unique: true,
     lowercase: true,
     trim: true,
-    match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please enter a valid email',
-    ],
   })
   email: string;
 
@@ -71,7 +63,6 @@ export class UserSchemaClass {
   @Prop({
     required: true,
     enum: ['traffic', 'investigator', 'chief', 'admin'],
-    message: 'Role must be traffic, investigator, chief, or admin',
   })
   role: UserRole;
 
@@ -84,10 +75,7 @@ export class UserSchemaClass {
   @Prop({ trim: true })
   profileImageUrl?: string;
 
-  @Prop({
-    trim: true,
-    match: [/^[+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number'],
-  })
+  @Prop({ trim: true })
   phoneNumber?: string;
 
   @Prop({ default: true })
@@ -103,17 +91,14 @@ export class UserSchemaClass {
   @Prop({ trim: true })
   vehicleId?: string;
 
-  @Prop({
-    enum: ['morning', 'afternoon', 'night'],
-    message: 'Shift must be morning, afternoon, or night',
-  })
+  @Prop({ enum: ['morning', 'afternoon', 'night'] })
   shift?: 'morning' | 'afternoon' | 'night';
 
   @Prop({ default: 0, min: 0 })
   reportsSubmitted?: number;
 
   // Investigator specific fields
-  @Prop({ type: [String], trim: true })
+  @Prop({ type: [String] })
   specialization?: string[];
 
   @Prop({ default: 0, min: 0 })
@@ -142,47 +127,20 @@ export class UserSchemaClass {
   @Prop({ min: 1, max: 10 })
   accessLevel?: number;
 
-  @Prop({ type: [String], trim: true })
+  @Prop({ type: [String] })
   systemPermissions?: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(UserSchemaClass);
 export type UserDocument = UserSchemaClass & Document;
 
-// Virtual methods
+// Simple virtual methods
 UserSchema.virtual('displayName').get(function () {
   return `${this.firstName} ${this.lastName}`.trim();
 });
 
-UserSchema.virtual('fullNameWithRole').get(function () {
-  const displayName = `${this.firstName} ${this.lastName}`.trim();
-  const roleNames = {
-    traffic: 'Traffic Personnel',
-    investigator: 'Investigator',
-    chief: 'Chief Analyst',
-    admin: 'Administrator',
-  };
-  return `${displayName} (${roleNames[this.role]})`;
-});
-
-UserSchema.virtual('initials').get(function () {
-  if (this.firstName && this.lastName) {
-    return `${this.firstName[0]}${this.lastName[0]}`.toUpperCase();
-  }
-
-  // Fallback to role-based initials
-  const roleInitials = {
-    traffic: 'TP',
-    investigator: 'IN',
-    chief: 'CA',
-    admin: 'AD',
-  };
-  return roleInitials[this.role];
-});
-
-// Indexes
+// Indexes for performance
 UserSchema.index({ email: 1 });
 UserSchema.index({ badgeId: 1 });
 UserSchema.index({ role: 1 });
-UserSchema.index({ department: 1 });
 UserSchema.index({ isActive: 1 });
