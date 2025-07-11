@@ -3,6 +3,7 @@ import { VehicleRepository } from '../repositories/vehicle.repository';
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
 import { IncidentService } from '../../incident/services/incident.service';
+import { objectIdToString } from '../../common/objectid.utils';
 
 @Injectable()
 export class VehicleService {
@@ -37,7 +38,7 @@ export class VehicleService {
       return [];
     }
 
-    const vehicleIds = incident.vehicleIds.map((id) => id.toString());
+    const vehicleIds = incident.vehicleIds.map((id) => objectIdToString(id));
     return this.vehicleRepo.findByIds(vehicleIds);
   }
 }

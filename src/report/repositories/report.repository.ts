@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ReportSchemaClass, ReportDocument } from '../entities/report.entity';
 import { CreateReportDto } from '../dtos/create-report.dto';
+import { convertToObjectId, convertArrayToObjectIds } from '../../common/objectid.utils';
 
 @Injectable()
 export class ReportRepository {
@@ -15,35 +16,19 @@ export class ReportRepository {
     private readonly reportModel: Model<ReportDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(createReportDto: CreateReportDto): Promise<ReportDocument> {
     try {
       const report = new this.reportModel({
         ...createReportDto,
-        incidentId: this.convertToObjectId(createReportDto.incidentId),
-        createdBy: this.convertToObjectId(createReportDto.createdBy),
+        incidentId: convertToObjectId(createReportDto.incidentId),
+        createdBy: convertToObjectId(createReportDto.createdBy),
         assignedTo: createReportDto.assignedTo
-          ? this.convertToObjectId(createReportDto.assignedTo)
+          ? convertToObjectId(createReportDto.assignedTo)
           : undefined,
         approvedBy: createReportDto.approvedBy
-          ? this.convertToObjectId(createReportDto.approvedBy)
+          ? convertToObjectId(createReportDto.approvedBy)
           : undefined,
-        relatedReports: this.convertArrayToObjectIds(
+        relatedReports: convertArrayToObjectIds(
           createReportDto.relatedReports,
         ),
       });
@@ -91,19 +76,19 @@ export class ReportRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.incidentId) {
-        dataToUpdate.incidentId = this.convertToObjectId(updateData.incidentId);
+        dataToUpdate.incidentId = convertToObjectId(updateData.incidentId);
       }
       if (updateData.createdBy) {
-        dataToUpdate.createdBy = this.convertToObjectId(updateData.createdBy);
+        dataToUpdate.createdBy = convertToObjectId(updateData.createdBy);
       }
       if (updateData.assignedTo) {
-        dataToUpdate.assignedTo = this.convertToObjectId(updateData.assignedTo);
+        dataToUpdate.assignedTo = convertToObjectId(updateData.assignedTo);
       }
       if (updateData.approvedBy) {
-        dataToUpdate.approvedBy = this.convertToObjectId(updateData.approvedBy);
+        dataToUpdate.approvedBy = convertToObjectId(updateData.approvedBy);
       }
       if (updateData.relatedReports) {
-        dataToUpdate.relatedReports = this.convertArrayToObjectIds(
+        dataToUpdate.relatedReports = convertArrayToObjectIds(
           updateData.relatedReports,
         );
       }
@@ -156,7 +141,7 @@ export class ReportRepository {
     }
 
     return this.reportModel
-      .find({ incidentId: this.convertToObjectId(incidentId) })
+      .find({ incidentId: convertToObjectId(incidentId) })
       .populate('incidentId')
       .populate('createdBy')
       .populate('assignedTo')

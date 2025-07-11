@@ -3,6 +3,7 @@ import { EvidenceRepository } from '../repositories/evidence.repository';
 import { CreateEvidenceDto } from '../dtos/create-evidence.dto';
 import { UpdateEvidenceDto } from '../dtos/update-evidence.dto';
 import { IncidentService } from '../../incident/services/incident.service';
+import { objectIdToString } from '../../common/objectid.utils';
 
 @Injectable()
 export class EvidenceService {
@@ -38,7 +39,7 @@ export class EvidenceService {
       return [];
     }
 
-    const evidenceIds = incident.evidenceIds.map((id) => id.toString());
+    const evidenceIds = incident.evidenceIds.map((id) => objectIdToString(id));
     return this.evidenceRepo.findByIds(evidenceIds);
   }
 }

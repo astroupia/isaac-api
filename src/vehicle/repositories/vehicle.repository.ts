@@ -11,6 +11,7 @@ import {
 } from '../entities/vehicle.entity';
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
+import { convertToObjectId, convertArrayToObjectIds } from '../../common/objectid.utils';
 
 @Injectable()
 export class VehicleRepository {
@@ -19,30 +20,14 @@ export class VehicleRepository {
     private readonly vehicleModel: Model<VehicleDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(createVehicleDto: CreateVehicleDto): Promise<VehicleDocument> {
     try {
       const vehicle = new this.vehicleModel({
         ...createVehicleDto,
         driver: createVehicleDto.driver
-          ? this.convertToObjectId(createVehicleDto.driver)
+          ? convertToObjectId(createVehicleDto.driver)
           : undefined,
-        passengers: this.convertArrayToObjectIds(createVehicleDto.passengers),
+        passengers: convertArrayToObjectIds(createVehicleDto.passengers),
       });
       return await vehicle.save();
     } catch (error: any) {
@@ -85,10 +70,10 @@ export class VehicleRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.driver) {
-        dataToUpdate.driver = this.convertToObjectId(updateData.driver);
+        dataToUpdate.driver = convertToObjectId(updateData.driver);
       }
       if (updateData.passengers) {
-        dataToUpdate.passengers = this.convertArrayToObjectIds(
+        dataToUpdate.passengers = convertArrayToObjectIds(
           updateData.passengers,
         );
       }
@@ -135,7 +120,7 @@ export class VehicleRepository {
   }
 
   async findByIds(ids: string[]): Promise<VehicleDocument[]> {
-    const objectIds = ids.map((id) => this.convertToObjectId(id));
+    const objectIds = ids.map((id) => convertToObjectId(id));
     return this.vehicleModel
       .find({ _id: { $in: objectIds } })
       .populate('driver')
