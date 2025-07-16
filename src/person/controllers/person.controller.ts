@@ -25,6 +25,11 @@ export class PersonController {
     return this.personService.findAll();
   }
 
+  @Get('incident/:incidentId')
+  getByIncidentId(@Param('incidentId') incidentId: string) {
+    return this.personService.findByIncidentId(incidentId);
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.personService.findById(id);
@@ -38,10 +43,5 @@ export class PersonController {
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.personService.delete(id);
-  }
-
-  @Get('incident/:incidentId')
-  getByIncidentId(@Param('incidentId') incidentId: string) {
-    return this.personService.findByIncidentId(incidentId);
   }
 }

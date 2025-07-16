@@ -20,6 +20,16 @@ export class VehicleController {
     return this.vehicleService.create(dto);
   }
 
+  @Get()
+  findAll() {
+    return this.vehicleService.findAll();
+  }
+
+  @Get('incident/:incidentId')
+  getByIncidentId(@Param('incidentId') incidentId: string) {
+    return this.vehicleService.findByIncidentId(incidentId);
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.vehicleService.findById(id);
@@ -33,15 +43,5 @@ export class VehicleController {
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.vehicleService.delete(id);
-  }
-
-  @Get()
-  findAll() {
-    return this.vehicleService.findAll();
-  }
-
-  @Get('incident/:incidentId')
-  getByIncidentId(@Param('incidentId') incidentId: string) {
-    return this.vehicleService.findByIncidentId(incidentId);
   }
 }
