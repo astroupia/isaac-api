@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument, UserRole } from '../entities/user.entity';
 import { CreateUserDto } from '../dtos/create-user.dto';
+import { convertToObjectId, convertArrayToObjectIds } from '../../common/objectid.utils';
 
 @Injectable()
 export class UserRepository {
@@ -15,27 +16,11 @@ export class UserRepository {
     private readonly userModel: Model<UserDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
     try {
       const user = new this.userModel({
         ...createUserDto,
-        subordinates: this.convertArrayToObjectIds(createUserDto.subordinates),
+        subordinates: convertArrayToObjectIds(createUserDto.subordinates),
       });
       return await user.save();
     } catch (error: any) {
@@ -99,7 +84,7 @@ export class UserRepository {
     try {
       const dataToUpdate = { ...updateData };
       if (updateData.subordinates) {
-        dataToUpdate.subordinates = this.convertArrayToObjectIds(
+        dataToUpdate.subordinates = convertArrayToObjectIds(
           updateData.subordinates,
         );
       }

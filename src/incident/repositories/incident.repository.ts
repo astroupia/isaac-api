@@ -10,6 +10,7 @@ import {
   IncidentDocument,
 } from '../entities/incident.entity';
 import { CreateIncidentDto } from '../dtos/create-incident.dto';
+import { convertToObjectId, convertArrayToObjectIds } from '../../common/objectid.utils';
 
 @Injectable()
 export class IncidentRepository {
@@ -18,35 +19,19 @@ export class IncidentRepository {
     private readonly incidentModel: Model<IncidentDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(
     createIncidentDto: CreateIncidentDto,
   ): Promise<IncidentDocument> {
     try {
       const incident = new this.incidentModel({
         ...createIncidentDto,
-        evidenceIds: this.convertArrayToObjectIds(
+        evidenceIds: convertArrayToObjectIds(
           createIncidentDto.evidenceIds,
         ),
-        vehicleIds: this.convertArrayToObjectIds(createIncidentDto.vehicleIds),
-        personIds: this.convertArrayToObjectIds(createIncidentDto.personIds),
+        vehicleIds: convertArrayToObjectIds(createIncidentDto.vehicleIds),
+        personIds: convertArrayToObjectIds(createIncidentDto.personIds),
         environmentId: createIncidentDto.environmentId
-          ? this.convertToObjectId(createIncidentDto.environmentId)
+          ? convertToObjectId(createIncidentDto.environmentId)
           : undefined,
       });
       return await incident.save();
@@ -92,22 +77,22 @@ export class IncidentRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.evidenceIds) {
-        dataToUpdate.evidenceIds = this.convertArrayToObjectIds(
+        dataToUpdate.evidenceIds = convertArrayToObjectIds(
           updateData.evidenceIds,
         );
       }
       if (updateData.vehicleIds) {
-        dataToUpdate.vehicleIds = this.convertArrayToObjectIds(
+        dataToUpdate.vehicleIds = convertArrayToObjectIds(
           updateData.vehicleIds,
         );
       }
       if (updateData.personIds) {
-        dataToUpdate.personIds = this.convertArrayToObjectIds(
+        dataToUpdate.personIds = convertArrayToObjectIds(
           updateData.personIds,
         );
       }
       if (updateData.environmentId) {
-        dataToUpdate.environmentId = this.convertToObjectId(
+        dataToUpdate.environmentId = convertToObjectId(
           updateData.environmentId,
         );
       }

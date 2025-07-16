@@ -43,7 +43,7 @@ export class VehicleRepository {
       const vehicle = new this.vehicleModel({
         ...createVehicleDto,
         driver: createVehicleDto.driver
-          ? this.convertToObjectId(createVehicleDto.driver)
+          ? convertToObjectId(createVehicleDto.driver)
           : undefined,
         passengers: this.convertArrayToObjectIds(createVehicleDto.passengers),
         incidentIds: this.convertArrayToObjectIds(createVehicleDto.incidentIds),
@@ -90,10 +90,10 @@ export class VehicleRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.driver) {
-        dataToUpdate.driver = this.convertToObjectId(updateData.driver);
+        dataToUpdate.driver = convertToObjectId(updateData.driver);
       }
       if (updateData.passengers) {
-        dataToUpdate.passengers = this.convertArrayToObjectIds(
+        dataToUpdate.passengers = convertArrayToObjectIds(
           updateData.passengers,
         );
       }
@@ -147,7 +147,7 @@ export class VehicleRepository {
   }
 
   async findByIds(ids: string[]): Promise<VehicleDocument[]> {
-    const objectIds = ids.map((id) => this.convertToObjectId(id));
+    const objectIds = ids.map((id) => convertToObjectId(id));
     return this.vehicleModel
       .find({ _id: { $in: objectIds } })
       .populate('driver')

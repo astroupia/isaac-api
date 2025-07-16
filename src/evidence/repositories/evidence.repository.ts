@@ -10,6 +10,7 @@ import {
   EvidenceDocument,
 } from '../entities/evidence.entity';
 import { CreateEvidenceDto } from '../dtos/create-evidence.dto';
+import { convertToObjectId, convertArrayToObjectIds } from '../../common/objectid.utils';
 import { ObjectIdUtils } from '../../common/utils/objectid.utils';
 
 @Injectable()
@@ -25,14 +26,17 @@ export class EvidenceRepository {
     try {
       const evidence = new this.evidenceModel({
         ...createEvidenceDto,
+        uploadedBy: convertToObjectId(createEvidenceDto.uploadedBy),
         uploadedBy: ObjectIdUtils.convertToObjectId(
           createEvidenceDto.uploadedBy,
         ),
         relatedTo: createEvidenceDto.relatedTo
           ? {
+              vehicleIds: convertArrayToObjectIds(
               vehicleIds: ObjectIdUtils.convertArrayToObjectIds(
                 createEvidenceDto.relatedTo.vehicleIds,
               ),
+              personIds: convertArrayToObjectIds(
               personIds: ObjectIdUtils.convertArrayToObjectIds(
                 createEvidenceDto.relatedTo.personIds,
               ),
@@ -79,15 +83,18 @@ export class EvidenceRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.uploadedBy) {
+        dataToUpdate.uploadedBy = convertToObjectId(updateData.uploadedBy);
         dataToUpdate.uploadedBy = ObjectIdUtils.convertToObjectId(
           updateData.uploadedBy,
         );
       }
       if (updateData.relatedTo) {
         dataToUpdate.relatedTo = {
+          vehicleIds: convertArrayToObjectIds(
           vehicleIds: ObjectIdUtils.convertArrayToObjectIds(
             updateData.relatedTo.vehicleIds,
           ),
+          personIds: convertArrayToObjectIds(
           personIds: ObjectIdUtils.convertArrayToObjectIds(
             updateData.relatedTo.personIds,
           ),
@@ -130,6 +137,7 @@ export class EvidenceRepository {
   }
 
   async findByIds(ids: string[]): Promise<EvidenceDocument[]> {
+    const objectIds = ids.map((id) => convertToObjectId(id));
     const objectIds = ObjectIdUtils.convertArrayToObjectIds(ids);
     return this.evidenceModel
       .find({ _id: { $in: objectIds } })

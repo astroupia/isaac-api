@@ -7,6 +7,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PersonSchemaClass, PersonDocument } from '../entities/person.entity';
 import { CreatePersonDto } from '../dtos/create-person.dto';
+import {
+  convertToObjectId,
+  convertArrayToObjectIds,
+} from '../../common/objectid.utils';
 import { IncidentDocument } from '../../incident/entities/incident.entity';
 
 @Injectable()
@@ -18,29 +22,13 @@ export class PersonRepository {
     private readonly incidentModel: Model<IncidentDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(createPersonDto: CreatePersonDto): Promise<PersonDocument> {
     try {
       const person = new this.personModel({
         ...createPersonDto,
-        incidentIds: this.convertArrayToObjectIds(createPersonDto.incidentIds),
-        vehicleIds: this.convertArrayToObjectIds(createPersonDto.vehicleIds),
-        evidenceIds: this.convertArrayToObjectIds(createPersonDto.evidenceIds),
+        incidentIds: convertArrayToObjectIds(createPersonDto.incidentIds),
+        vehicleIds: convertArrayToObjectIds(createPersonDto.vehicleIds),
+        evidenceIds: convertArrayToObjectIds(createPersonDto.evidenceIds),
       });
       return await person.save();
     } catch (error: any) {
@@ -84,17 +72,17 @@ export class PersonRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.incidentIds) {
-        dataToUpdate.incidentIds = this.convertArrayToObjectIds(
+        dataToUpdate.incidentIds = convertArrayToObjectIds(
           updateData.incidentIds,
         );
       }
       if (updateData.vehicleIds) {
-        dataToUpdate.vehicleIds = this.convertArrayToObjectIds(
+        dataToUpdate.vehicleIds = convertArrayToObjectIds(
           updateData.vehicleIds,
         );
       }
       if (updateData.evidenceIds) {
-        dataToUpdate.evidenceIds = this.convertArrayToObjectIds(
+        dataToUpdate.evidenceIds = convertArrayToObjectIds(
           updateData.evidenceIds,
         );
       }
@@ -144,6 +132,9 @@ export class PersonRepository {
       throw new BadRequestException(`Invalid ObjectId format: ${incidentId}`);
     }
 
+    return this.personModel.find({
+      incidentIds: convertToObjectId(incidentId),
+    });
     const objectId = this.convertToObjectId(incidentId);
 
     // First, try to find persons that have this incident in their incidentIds
