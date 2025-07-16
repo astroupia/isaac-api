@@ -12,6 +12,10 @@ import {
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
 import { IncidentDocument } from '../../incident/entities/incident.entity';
+import {
+  convertToObjectId,
+  convertArrayToObjectIds,
+} from '../../common/objectid.utils';
 
 @Injectable()
 export class VehicleRepository {
@@ -22,22 +26,6 @@ export class VehicleRepository {
     private readonly incidentModel: Model<IncidentDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(createVehicleDto: CreateVehicleDto): Promise<VehicleDocument> {
     try {
       const vehicle = new this.vehicleModel({
@@ -45,8 +33,8 @@ export class VehicleRepository {
         driver: createVehicleDto.driver
           ? convertToObjectId(createVehicleDto.driver)
           : undefined,
-        passengers: this.convertArrayToObjectIds(createVehicleDto.passengers),
-        incidentIds: this.convertArrayToObjectIds(createVehicleDto.incidentIds),
+        passengers: convertArrayToObjectIds(createVehicleDto.passengers),
+        incidentIds: convertArrayToObjectIds(createVehicleDto.incidentIds),
       });
       return await vehicle.save();
     } catch (error: any) {
@@ -98,7 +86,7 @@ export class VehicleRepository {
         );
       }
       if (updateData.incidentIds) {
-        dataToUpdate.incidentIds = this.convertArrayToObjectIds(
+        dataToUpdate.incidentIds = convertArrayToObjectIds(
           updateData.incidentIds,
         );
       }
@@ -161,7 +149,7 @@ export class VehicleRepository {
       throw new BadRequestException(`Invalid ObjectId format: ${incidentId}`);
     }
 
-    const objectId = this.convertToObjectId(incidentId);
+    const objectId = convertToObjectId(incidentId);
 
     // First, try to find vehicles that have this incident in their incidentIds
     const vehiclesFromVehicleSide = await this.vehicleModel
@@ -183,7 +171,7 @@ export class VehicleRepository {
         .populate('vehicleIds')
         .exec();
 
-      if (incident && incident.vehicleIds && incident.vehicleIds.length > 0) {
+      if (incident?.vehicleIds && incident.vehicleIds.length > 0) {
         // Get the vehicle IDs from the incident
         const vehicleIds = incident.vehicleIds.map(
           (vehicle: any) => vehicle._id || vehicle,

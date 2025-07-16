@@ -132,10 +132,7 @@ export class PersonRepository {
       throw new BadRequestException(`Invalid ObjectId format: ${incidentId}`);
     }
 
-    return this.personModel.find({
-      incidentIds: convertToObjectId(incidentId),
-    });
-    const objectId = this.convertToObjectId(incidentId);
+    const objectId = convertToObjectId(incidentId);
 
     // First, try to find persons that have this incident in their incidentIds
     const personsFromPersonSide = await this.personModel
@@ -157,7 +154,7 @@ export class PersonRepository {
         .populate('personIds')
         .exec();
 
-      if (incident && incident.personIds && incident.personIds.length > 0) {
+      if (incident?.personIds && incident.personIds.length > 0) {
         // Get the person IDs from the incident
         const personIds = incident.personIds.map(
           (person: any) => person._id || person,
