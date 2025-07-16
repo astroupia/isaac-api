@@ -17,6 +17,7 @@ export class Vehicle {
   damageSeverity?: string;
   damageAreas?: string[];
   airbagDeployed?: boolean;
+  incidentIds?: Types.ObjectId[];
 }
 
 // Mongoose schema class
@@ -37,6 +38,8 @@ export class VehicleSchemaClass {
   @Prop() damageSeverity?: string;
   @Prop({ type: [String] }) damageAreas?: string[];
   @Prop() airbagDeployed?: boolean;
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Incident' }] })
+  incidentIds?: Types.ObjectId[];
 }
 
 export const VehicleSchema = SchemaFactory.createForClass(VehicleSchemaClass);

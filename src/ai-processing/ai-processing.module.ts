@@ -8,21 +8,15 @@ import { ConversationService } from './services/conversation.service';
 import { AiProcessingController } from './controllers/ai-processing.controller';
 import { EvidenceModule } from '../evidence/evidence.module';
 import { ReportModule } from '../report/report.module';
-import {
-  AiAnalysisResult,
-  AiAnalysisResultSchema,
-} from './entities/ai-analysis-result.entity';
-import {
-  AiConversation,
-  AiConversationSchema,
-} from './entities/ai-conversation.entity';
+import { AiAnalysisResultSchema } from './entities/ai-analysis-result.entity';
+import { AiConversationSchema } from './entities/ai-conversation.entity';
 
 @Module({
   imports: [
     ConfigModule,
     MongooseModule.forFeature([
-      { name: AiAnalysisResult.name, schema: AiAnalysisResultSchema },
-      { name: AiConversation.name, schema: AiConversationSchema },
+      { name: 'AiAnalysisResult', schema: AiAnalysisResultSchema },
+      { name: 'AiConversation', schema: AiConversationSchema },
     ]),
     EvidenceModule,
     ReportModule,

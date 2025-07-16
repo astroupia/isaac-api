@@ -2,10 +2,13 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsNumber,
   IsArray,
+  IsNumber,
   IsBoolean,
+  Min,
+  IsEnum,
 } from 'class-validator';
+import { VehicleType, DamageSeverity } from '../../types/vehicle';
 
 export class CreateVehicleDto {
   @IsString()
@@ -32,12 +35,12 @@ export class CreateVehicleDto {
   @IsOptional()
   vin?: string;
 
-  @IsString()
+  @IsEnum(VehicleType)
   @IsNotEmpty()
-  vehicleType: string;
+  vehicleType: VehicleType;
 
   @IsNumber()
-  @IsNotEmpty()
+  @Min(0)
   occupantsCount: number;
 
   @IsString()
@@ -52,9 +55,9 @@ export class CreateVehicleDto {
   @IsOptional()
   damageDescription?: string;
 
-  @IsString()
+  @IsEnum(DamageSeverity)
   @IsOptional()
-  damageSeverity?: string;
+  damageSeverity?: DamageSeverity;
 
   @IsArray()
   @IsOptional()
@@ -63,4 +66,8 @@ export class CreateVehicleDto {
   @IsBoolean()
   @IsOptional()
   airbagDeployed?: boolean;
+
+  @IsArray()
+  @IsOptional()
+  incidentIds?: string[];
 }

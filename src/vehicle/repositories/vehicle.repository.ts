@@ -11,12 +11,15 @@ import {
 } from '../entities/vehicle.entity';
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
+import { IncidentDocument } from '../../incident/entities/incident.entity';
 
 @Injectable()
 export class VehicleRepository {
   constructor(
     @InjectModel('Vehicle')
     private readonly vehicleModel: Model<VehicleDocument>,
+    @InjectModel('Incident')
+    private readonly incidentModel: Model<IncidentDocument>,
   ) {}
 
   private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
@@ -43,6 +46,7 @@ export class VehicleRepository {
           ? this.convertToObjectId(createVehicleDto.driver)
           : undefined,
         passengers: this.convertArrayToObjectIds(createVehicleDto.passengers),
+        incidentIds: this.convertArrayToObjectIds(createVehicleDto.incidentIds),
       });
       return await vehicle.save();
     } catch (error: any) {
@@ -67,6 +71,7 @@ export class VehicleRepository {
       .findById(id)
       .populate('driver')
       .populate('passengers')
+      .populate('incidentIds')
       .exec();
     if (!vehicle) {
       throw new NotFoundException(`Vehicle with ID ${id} not found`);
@@ -92,10 +97,16 @@ export class VehicleRepository {
           updateData.passengers,
         );
       }
+      if (updateData.incidentIds) {
+        dataToUpdate.incidentIds = this.convertArrayToObjectIds(
+          updateData.incidentIds,
+        );
+      }
       const vehicle = await this.vehicleModel
         .findByIdAndUpdate(id, dataToUpdate, { new: true })
         .populate('driver')
         .populate('passengers')
+        .populate('incidentIds')
         .exec();
       if (!vehicle) {
         throw new NotFoundException(`Vehicle with ID ${id} not found`);
@@ -131,6 +142,7 @@ export class VehicleRepository {
       .find()
       .populate('driver')
       .populate('passengers')
+      .populate('incidentIds')
       .exec();
   }
 
@@ -140,6 +152,59 @@ export class VehicleRepository {
       .find({ _id: { $in: objectIds } })
       .populate('driver')
       .populate('passengers')
+      .populate('incidentIds')
       .exec();
+  }
+
+  async findByIncidentId(incidentId: string): Promise<VehicleDocument[]> {
+    if (!Types.ObjectId.isValid(incidentId)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${incidentId}`);
+    }
+
+    const objectId = this.convertToObjectId(incidentId);
+
+    // First, try to find vehicles that have this incident in their incidentIds
+    const vehiclesFromVehicleSide = await this.vehicleModel
+      .find({ incidentIds: objectId })
+      .populate('driver')
+      .populate('passengers')
+      .populate('incidentIds')
+      .exec();
+
+    // If we found vehicles, return them
+    if (vehiclesFromVehicleSide.length > 0) {
+      return vehiclesFromVehicleSide;
+    }
+
+    // If no vehicles found from vehicle side, try to find the incident and get vehicleIds from there
+    try {
+      const incident = await this.incidentModel
+        .findById(objectId)
+        .populate('vehicleIds')
+        .exec();
+
+      if (incident && incident.vehicleIds && incident.vehicleIds.length > 0) {
+        // Get the vehicle IDs from the incident
+        const vehicleIds = incident.vehicleIds.map(
+          (vehicle: any) => vehicle._id || vehicle,
+        );
+
+        // Find all vehicles with those IDs
+        const vehiclesFromIncidentSide = await this.vehicleModel
+          .find({ _id: { $in: vehicleIds } })
+          .populate('driver')
+          .populate('passengers')
+          .populate('incidentIds')
+          .exec();
+
+        return vehiclesFromIncidentSide;
+      }
+    } catch (error: any) {
+      // If incident model is not available or other error, just return empty array
+      console.warn('Could not query incident model:', error.message);
+    }
+
+    // Return empty array if no vehicles found in either direction
+    return [];
   }
 }

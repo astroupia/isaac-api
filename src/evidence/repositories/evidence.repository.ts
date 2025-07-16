@@ -10,6 +10,7 @@ import {
   EvidenceDocument,
 } from '../entities/evidence.entity';
 import { CreateEvidenceDto } from '../dtos/create-evidence.dto';
+import { ObjectIdUtils } from '../../common/utils/objectid.utils';
 
 @Injectable()
 export class EvidenceRepository {
@@ -18,35 +19,21 @@ export class EvidenceRepository {
     private readonly evidenceModel: Model<EvidenceDocument>,
   ) {}
 
-  private convertToObjectId(id: string | Types.ObjectId): Types.ObjectId {
-    if (typeof id === 'string') {
-      if (!Types.ObjectId.isValid(id)) {
-        throw new BadRequestException(`Invalid ObjectId format: ${id}`);
-      }
-      return new Types.ObjectId(id);
-    }
-    return id;
-  }
-
-  private convertArrayToObjectIds(
-    ids: (string | Types.ObjectId)[] = [],
-  ): Types.ObjectId[] {
-    return ids.map((id) => this.convertToObjectId(id));
-  }
-
   async create(
     createEvidenceDto: CreateEvidenceDto,
   ): Promise<EvidenceDocument> {
     try {
       const evidence = new this.evidenceModel({
         ...createEvidenceDto,
-        uploadedBy: this.convertToObjectId(createEvidenceDto.uploadedBy),
+        uploadedBy: ObjectIdUtils.convertToObjectId(
+          createEvidenceDto.uploadedBy,
+        ),
         relatedTo: createEvidenceDto.relatedTo
           ? {
-              vehicleIds: this.convertArrayToObjectIds(
+              vehicleIds: ObjectIdUtils.convertArrayToObjectIds(
                 createEvidenceDto.relatedTo.vehicleIds,
               ),
-              personIds: this.convertArrayToObjectIds(
+              personIds: ObjectIdUtils.convertArrayToObjectIds(
                 createEvidenceDto.relatedTo.personIds,
               ),
             }
@@ -92,14 +79,16 @@ export class EvidenceRepository {
     try {
       const dataToUpdate: any = { ...updateData };
       if (updateData.uploadedBy) {
-        dataToUpdate.uploadedBy = this.convertToObjectId(updateData.uploadedBy);
+        dataToUpdate.uploadedBy = ObjectIdUtils.convertToObjectId(
+          updateData.uploadedBy,
+        );
       }
       if (updateData.relatedTo) {
         dataToUpdate.relatedTo = {
-          vehicleIds: this.convertArrayToObjectIds(
+          vehicleIds: ObjectIdUtils.convertArrayToObjectIds(
             updateData.relatedTo.vehicleIds,
           ),
-          personIds: this.convertArrayToObjectIds(
+          personIds: ObjectIdUtils.convertArrayToObjectIds(
             updateData.relatedTo.personIds,
           ),
         };
@@ -141,7 +130,7 @@ export class EvidenceRepository {
   }
 
   async findByIds(ids: string[]): Promise<EvidenceDocument[]> {
-    const objectIds = ids.map((id) => this.convertToObjectId(id));
+    const objectIds = ObjectIdUtils.convertArrayToObjectIds(ids);
     return this.evidenceModel
       .find({ _id: { $in: objectIds } })
       .populate('uploadedBy')

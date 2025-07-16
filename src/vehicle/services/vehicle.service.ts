@@ -2,14 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { VehicleRepository } from '../repositories/vehicle.repository';
 import { CreateVehicleDto } from '../dtos/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
-import { IncidentService } from '../../incident/services/incident.service';
 
 @Injectable()
 export class VehicleService {
-  constructor(
-    private readonly vehicleRepo: VehicleRepository,
-    private readonly incidentService: IncidentService,
-  ) {}
+  constructor(private readonly vehicleRepo: VehicleRepository) {}
 
   create(dto: CreateVehicleDto) {
     return this.vehicleRepo.create(dto);
@@ -32,12 +28,6 @@ export class VehicleService {
   }
 
   async findByIncidentId(incidentId: string) {
-    const incident = await this.incidentService.findById(incidentId);
-    if (!incident.vehicleIds || incident.vehicleIds.length === 0) {
-      return [];
-    }
-
-    const vehicleIds = incident.vehicleIds.map((id) => id.toString());
-    return this.vehicleRepo.findByIds(vehicleIds);
+    return this.vehicleRepo.findByIncidentId(incidentId);
   }
 }
