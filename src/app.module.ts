@@ -1,41 +1,35 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CloudinaryModule } from './cloudinary/cloudinary.module';
-import { CloudinaryController } from './cloudinary/controllers/cloudinary.controller';
-import { CloudinaryService } from './cloudinary/services/cloudinary.service';
-import { IncidentModule } from './incident/incident.module';
-import { ReportModule } from './report/report.module';
-import { EvidenceModule } from './evidence/evidence.module';
-import { VehicleModule } from './vehicle/vehicle.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { DatabaseModule } from './infrastructure/database/database.module';
 import { PersonModule } from './person/person.module';
+import { VehicleModule } from './vehicle/vehicle.module';
+import { EvidenceModule } from './evidence/evidence.module';
+import { ReportModule } from './report/report.module';
+import { IncidentModule } from './incident/incident.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { UserModule } from './user/user.module';
+import { AiProcessingModule } from './ai-processing/ai-processing.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      cache: true,
+      envFilePath: ['.env.local', '.env'],
     }),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URI'),
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-      }),
-      inject: [ConfigService],
-    }),
-    IncidentModule,
-    ReportModule,
-    EvidenceModule,
-    VehicleModule,
+    DatabaseModule,
     PersonModule,
-    UserModule,
+    VehicleModule,
+    EvidenceModule,
+    ReportModule,
+    IncidentModule,
     CloudinaryModule,
+    UserModule,
+    AiProcessingModule,
   ],
-  controllers: [CloudinaryController],
-  providers: [CloudinaryService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
