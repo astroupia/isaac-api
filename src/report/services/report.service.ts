@@ -31,4 +31,8 @@ export class ReportService {
   async findByIncidentId(incidentId: string) {
     return this.reportRepo.findByIncidentId(incidentId);
   }
+
+  async findByAssignedTo(userId: string) {
+    return this.reportRepo.findByAssignedTo(userId);
+  }
 }

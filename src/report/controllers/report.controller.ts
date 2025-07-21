@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { ReportService } from '../services/report.service';
 import { CreateReportDto } from '../dtos/create-report.dto';
@@ -21,7 +22,10 @@ export class ReportController {
   }
 
   @Get()
-  findAll() {
+  findAll(@Query('assignedTo') assignedTo?: string) {
+    if (assignedTo) {
+      return this.reportService.findByAssignedTo(assignedTo);
+    }
     return this.reportService.findAll();
   }
 

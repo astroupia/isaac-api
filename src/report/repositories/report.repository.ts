@@ -7,7 +7,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ReportSchemaClass, ReportDocument } from '../entities/report.entity';
 import { CreateReportDto } from '../dtos/create-report.dto';
-import { convertToObjectId, convertArrayToObjectIds } from '../../common/objectid.utils';
+import {
+  convertToObjectId,
+  convertArrayToObjectIds,
+} from '../../common/objectid.utils';
 
 @Injectable()
 export class ReportRepository {
@@ -28,9 +31,7 @@ export class ReportRepository {
         approvedBy: createReportDto.approvedBy
           ? convertToObjectId(createReportDto.approvedBy)
           : undefined,
-        relatedReports: convertArrayToObjectIds(
-          createReportDto.relatedReports,
-        ),
+        relatedReports: convertArrayToObjectIds(createReportDto.relatedReports),
       });
       return await report.save();
     } catch (error: any) {
@@ -142,6 +143,21 @@ export class ReportRepository {
 
     return this.reportModel
       .find({ incidentId: convertToObjectId(incidentId) })
+      .populate('incidentId')
+      .populate('createdBy')
+      .populate('assignedTo')
+      .populate('approvedBy')
+      .populate('relatedReports')
+      .exec();
+  }
+
+  async findByAssignedTo(userId: string): Promise<ReportDocument[]> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException(`Invalid ObjectId format: ${userId}`);
+    }
+
+    return this.reportModel
+      .find({ assignedTo: convertToObjectId(userId) })
       .populate('incidentId')
       .populate('createdBy')
       .populate('assignedTo')
