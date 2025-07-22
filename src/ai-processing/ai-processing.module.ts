@@ -10,6 +10,7 @@ import { EvidenceModule } from '../evidence/evidence.module';
 import { ReportModule } from '../report/report.module';
 import { AiAnalysisResultSchema } from './entities/ai-analysis-result.entity';
 import { AiConversationSchema } from './entities/ai-conversation.entity';
+import { GeneratedCasualtyReportSchema } from './entities/generated-casualty-report.entity';
 
 @Module({
   imports: [
@@ -17,6 +18,10 @@ import { AiConversationSchema } from './entities/ai-conversation.entity';
     MongooseModule.forFeature([
       { name: 'AiAnalysisResult', schema: AiAnalysisResultSchema },
       { name: 'AiConversation', schema: AiConversationSchema },
+      {
+        name: 'GeneratedCasualtyReport',
+        schema: GeneratedCasualtyReportSchema,
+      },
     ]),
     EvidenceModule,
     ReportModule,

@@ -1,13 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   AiAnalysisResult,
   AiAnalysisResultDocument,
 } from '../entities/ai-analysis-result.entity';
+import {
+  GeneratedCasualtyReport,
+  GeneratedCasualtyReportDocument,
+} from '../entities/generated-casualty-report.entity';
 import { ReportService } from '../../report/services/report.service';
 import { EvidenceService } from '../../evidence/services/evidence.service';
 import { AiProcessingService } from './ai-processing.service';
+import { MediaAnalysisService } from './media-analysis.service';
+import { ObjectIdUtils } from '../../common/utils/objectid.utils';
 
 @Injectable()
 export class ReportEnhancementService {
@@ -16,9 +22,12 @@ export class ReportEnhancementService {
   constructor(
     @InjectModel(AiAnalysisResult.name)
     private aiAnalysisResultModel: Model<AiAnalysisResultDocument>,
+    @InjectModel(GeneratedCasualtyReport.name)
+    private generatedCasualtyReportModel: Model<GeneratedCasualtyReportDocument>,
     private reportService: ReportService,
     private evidenceService: EvidenceService,
     private aiProcessingService: AiProcessingService,
+    private mediaAnalysisService: MediaAnalysisService,
   ) {}
 
   /**
@@ -82,7 +91,7 @@ export class ReportEnhancementService {
     const summaryPrompt = this.generateSummaryPrompt(aggregatedFindings);
 
     // Use AI to create a coherent summary
-    const summary = await this.generateAISummary(summaryPrompt);
+    const summary = this.generateAISummary(summaryPrompt);
 
     return {
       incidentId,
@@ -91,6 +100,131 @@ export class ReportEnhancementService {
       overallConfidence: aggregatedFindings.overallConfidence,
       keyFindings: aggregatedFindings.keyFindings,
       recommendations: aggregatedFindings.recommendations,
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Generate comprehensive casualty report from report ID
+   * This method:
+   * 1. Gets the report by ID
+   * 2. Extracts the incident ID from the report
+   * 3. Fetches all evidence for that incident
+   * 4. Processes all evidence in batch
+   * 5. Generates a comprehensive casualty report
+   */
+  async generateCasualtyReport(reportId: string): Promise<any> {
+    this.logger.log(
+      `Generating comprehensive casualty report for report: ${reportId}`,
+    );
+
+    // Step 1: Get the report
+    const report = await this.reportService.findById(reportId);
+    if (!report) {
+      throw new Error('Report not found');
+    }
+
+    // Step 2: Extract incident ID from the report and convert to ObjectId
+    // Handle case where incidentId might be populated as full object or just the ID
+    this.logger.log(`Report incidentId type: ${typeof report.incidentId}`);
+    this.logger.log(
+      `Report incidentId value: ${JSON.stringify(report.incidentId)}`,
+    );
+
+    let incidentIdValue: string | Types.ObjectId;
+
+    if (
+      typeof report.incidentId === 'object' &&
+      report.incidentId !== null &&
+      (report.incidentId as any)._id
+    ) {
+      // If it's an object (populated), extract the _id
+      incidentIdValue = (report.incidentId as any)._id;
+      this.logger.log(
+        `Extracted _id from populated object: ${incidentIdValue?.toString() || 'undefined'}`,
+      );
+    } else {
+      // If it's already a string or ObjectId
+      incidentIdValue = report.incidentId;
+      this.logger.log(
+        `Using incidentId directly: ${incidentIdValue?.toString() || 'undefined'}`,
+      );
+    }
+
+    const incidentId = ObjectIdUtils.convertToObjectId(incidentIdValue);
+    this.logger.log(`Final converted incident ID: ${incidentId.toString()}`);
+
+    // Step 3: Fetch all evidence for that incident
+    const evidence = await this.evidenceService.findByIncidentId(
+      incidentId.toString(),
+    );
+    this.logger.log(`Found ${evidence.length} evidence items for incident`);
+
+    if (evidence.length === 0) {
+      throw new Error('No evidence found for this incident');
+    }
+
+    // Step 4: Process all evidence in batch
+    const evidenceItems = evidence.map((ev: any) => ({
+      evidenceId: ev._id?.toString() || ev.id,
+      type: ev.type,
+      fileUrl: ev.fileUrl,
+      customPrompt:
+        'Analyze this evidence for casualty assessment, vehicle damage, and incident reconstruction',
+    }));
+
+    // Process evidence in batch using media analysis service
+    const batchResults = await this.mediaAnalysisService.batchAnalyze(
+      evidenceItems,
+      reportId,
+      incidentId.toString(),
+    );
+
+    // Step 5: Generate comprehensive casualty report
+    const casualtyReport = await this.generateComprehensiveCasualtyReport(
+      report,
+      evidence,
+      batchResults,
+    );
+
+    // Step 6: Save the casualty report to the database
+    const savedCasualtyReport = new this.generatedCasualtyReportModel({
+      reportId: ObjectIdUtils.convertToObjectId(
+        report._id?.toString() || reportId,
+      ),
+      incidentId: incidentId, // Already converted to ObjectId above
+      generatedAt: new Date(),
+      processingSummary: casualtyReport.processingSummary,
+      casualtyAssessment: casualtyReport.casualtyAssessment,
+      vehicleAnalysis: casualtyReport.vehicleAnalysis,
+      environmentalAnalysis: casualtyReport.environmentalAnalysis,
+      incidentTimeline: casualtyReport.incidentTimeline,
+      recommendations: casualtyReport.recommendations,
+      aiConfidence: casualtyReport.aiConfidence,
+    });
+
+    await savedCasualtyReport.save();
+
+    // Update the report with a reference to the casualty report
+    const updatedReport = await this.reportService.update(reportId, {
+      content: {
+        ...report.content,
+        casualtyReportId: savedCasualtyReport._id,
+      },
+      updatedAt: new Date(),
+    });
+
+    this.logger.log(
+      `Casualty report generated and saved successfully for report: ${reportId}`,
+    );
+
+    return {
+      reportId,
+      incidentId,
+      casualtyReport: savedCasualtyReport,
+      evidenceProcessed: evidence.length,
+      batchResults,
+      updatedReport,
       generatedAt: new Date(),
     };
   }
@@ -131,6 +265,28 @@ export class ReportEnhancementService {
       aiSceneReconstruction: confidenceScores.sceneReconstruction,
       updatedAt: new Date(),
     });
+  }
+
+  /**
+   * Get generated casualty report by report ID
+   */
+  async getGeneratedCasualtyReport(reportId: string): Promise<any> {
+    this.logger.log(
+      `Retrieving generated casualty report for report: ${reportId}`,
+    );
+
+    // Convert reportId to ObjectId
+    const reportObjectId = ObjectIdUtils.convertToObjectId(reportId);
+
+    const casualtyReport = await this.generatedCasualtyReportModel
+      .findOne({ reportId: reportObjectId })
+      .exec();
+
+    if (!casualtyReport) {
+      throw new Error('No generated casualty report found for this report');
+    }
+
+    return casualtyReport;
   }
 
   /**
@@ -190,9 +346,7 @@ export class ReportEnhancementService {
   /**
    * Generate comprehensive report enhancement
    */
-  private async generateReportEnhancement(
-    analysisResults: any[],
-  ): Promise<any> {
+  private generateReportEnhancement(analysisResults: any[]): any {
     const enhancement = {
       aiContribution: 0,
       overallConfidence: 0,
@@ -340,7 +494,7 @@ export class ReportEnhancementService {
   /**
    * Generate AI summary using processed findings
    */
-  private async generateAISummary(prompt: string): Promise<string> {
+  private generateAISummary(prompt: string): string {
     // This would use the AI processing service to generate a summary
     // For now, return a placeholder
     return `AI-generated summary based on analysis of multiple evidence sources. 
@@ -654,5 +808,205 @@ export class ReportEnhancementService {
     return priorities[new_priority] > priorities[current]
       ? new_priority
       : current;
+  }
+
+  /**
+   * Generate comprehensive casualty report from processed evidence
+   */
+  private generateComprehensiveCasualtyReport(
+    report: any,
+    evidence: any[],
+    batchResults: any[],
+  ): any {
+    this.logger.log(
+      'Generating comprehensive casualty report from evidence analysis',
+    );
+
+    // Extract successful analysis results
+    const successfulResults = batchResults.filter(
+      (result) => result.status === 'fulfilled',
+    );
+    const failedResults = batchResults.filter(
+      (result) => result.status === 'rejected',
+    );
+
+    // Aggregate casualty information from all evidence
+    const casualtyData = {
+      totalCasualties: 0,
+      fatalities: 0,
+      seriousInjuries: 0,
+      minorInjuries: 0,
+      casualties: [] as any[],
+      vehicles: [] as any[],
+      environmentalFactors: [] as string[],
+      timeline: [] as any[],
+      recommendations: [] as string[],
+      overallConfidence: 0,
+    };
+
+    // Process each successful analysis result
+    for (const result of successfulResults) {
+      if (result.value && result.value.analysisResult) {
+        const analysis = result.value.analysisResult;
+
+        // Extract casualty information
+        if (analysis.detectedObjects && analysis.detectedObjects.persons) {
+          casualtyData.casualties.push(...analysis.detectedObjects.persons);
+          casualtyData.totalCasualties +=
+            analysis.detectedObjects.persons.length;
+        }
+
+        // Extract vehicle information
+        if (analysis.detectedObjects && analysis.detectedObjects.vehicles) {
+          casualtyData.vehicles.push(...analysis.detectedObjects.vehicles);
+        }
+
+        // Extract environmental factors
+        if (analysis.sceneAnalysis) {
+          if (analysis.sceneAnalysis.weatherConditions) {
+            casualtyData.environmentalFactors.push(
+              ...analysis.sceneAnalysis.weatherConditions,
+            );
+          }
+        }
+
+        // Extract recommendations
+        if (analysis.recommendations) {
+          if (analysis.recommendations.additionalEvidenceNeeded) {
+            casualtyData.recommendations.push(
+              ...analysis.recommendations.additionalEvidenceNeeded,
+            );
+          }
+        }
+
+        // Calculate overall confidence
+        if (analysis.confidenceScore) {
+          casualtyData.overallConfidence += analysis.confidenceScore;
+        }
+      }
+    }
+
+    // Calculate average confidence
+    if (successfulResults.length > 0) {
+      casualtyData.overallConfidence =
+        casualtyData.overallConfidence / successfulResults.length;
+    }
+
+    // Remove duplicates
+    casualtyData.environmentalFactors = [
+      ...new Set(casualtyData.environmentalFactors),
+    ];
+    casualtyData.recommendations = [...new Set(casualtyData.recommendations)];
+
+    // Generate timeline from evidence timestamps
+    casualtyData.timeline = evidence
+      .filter((ev) => ev.createdAt)
+      .map((ev) => ({
+        time: ev.createdAt,
+        description: `Evidence collected: ${ev.type}`,
+        source: ev.fileUrl,
+      }))
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    // Generate comprehensive report
+    const comprehensiveReport = {
+      reportId: report._id,
+      incidentId: report.incidentId,
+      generatedAt: new Date(),
+      processingSummary: {
+        totalEvidence: evidence.length,
+        successfullyProcessed: successfulResults.length,
+        failedProcessing: failedResults.length,
+        overallConfidence: casualtyData.overallConfidence,
+      },
+      casualtyAssessment: {
+        totalCasualties: casualtyData.totalCasualties,
+        casualties: casualtyData.casualties,
+        injuryBreakdown: {
+          fatalities: casualtyData.fatalities,
+          seriousInjuries: casualtyData.seriousInjuries,
+          minorInjuries: casualtyData.minorInjuries,
+        },
+      },
+      vehicleAnalysis: {
+        totalVehicles: casualtyData.vehicles.length,
+        vehicles: casualtyData.vehicles,
+        damageAssessment: this.aggregateDamageAssessment(
+          successfulResults.map((r) => r.value),
+        ),
+      },
+      environmentalAnalysis: {
+        factors: casualtyData.environmentalFactors,
+        weatherConditions: this.extractWeatherConditions(successfulResults),
+        roadConditions: this.extractRoadConditions(successfulResults),
+      },
+      incidentTimeline: casualtyData.timeline,
+      recommendations: casualtyData.recommendations,
+      aiConfidence: {
+        overall: casualtyData.overallConfidence,
+        vehicleDetection:
+          this.calculateVehicleDetectionConfidence(successfulResults),
+        casualtyAssessment:
+          this.calculateCasualtyAssessmentConfidence(successfulResults),
+        sceneReconstruction:
+          this.calculateSceneReconstructionConfidence(successfulResults),
+      },
+    };
+
+    return comprehensiveReport;
+  }
+
+  private extractWeatherConditions(results: any[]): string[] {
+    const weatherConditions: string[] = [];
+    for (const result of results) {
+      if (result.value?.analysisResult?.sceneAnalysis?.weatherConditions) {
+        weatherConditions.push(
+          ...result.value.analysisResult.sceneAnalysis.weatherConditions,
+        );
+      }
+    }
+    return [...new Set(weatherConditions)];
+  }
+
+  private extractRoadConditions(results: any[]): string[] {
+    const roadConditions: string[] = [];
+    for (const result of results) {
+      if (result.value?.analysisResult?.sceneAnalysis?.roadConditions) {
+        roadConditions.push(
+          ...result.value.analysisResult.sceneAnalysis.roadConditions,
+        );
+      }
+    }
+    return [...new Set(roadConditions)];
+  }
+
+  private calculateVehicleDetectionConfidence(results: any[]): number {
+    const confidences = results
+      .filter((r) => r.value?.analysisResult?.detectedObjects?.vehicles)
+      .map((r) => r.value.analysisResult.confidenceScore || 0);
+
+    return confidences.length > 0
+      ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+      : 0;
+  }
+
+  private calculateCasualtyAssessmentConfidence(results: any[]): number {
+    const confidences = results
+      .filter((r) => r.value?.analysisResult?.detectedObjects?.persons)
+      .map((r) => r.value.analysisResult.confidenceScore || 0);
+
+    return confidences.length > 0
+      ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+      : 0;
+  }
+
+  private calculateSceneReconstructionConfidence(results: any[]): number {
+    const confidences = results
+      .filter((r) => r.value?.analysisResult?.sceneAnalysis)
+      .map((r) => r.value.analysisResult.confidenceScore || 0);
+
+    return confidences.length > 0
+      ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+      : 0;
   }
 }

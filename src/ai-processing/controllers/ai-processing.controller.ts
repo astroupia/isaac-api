@@ -302,6 +302,43 @@ export class AiProcessingController {
   }
 
   /**
+   * Generate comprehensive casualty report from report ID
+   * This endpoint:
+   * 1. Gets the report by ID
+   * 2. Extracts the incident ID from the report
+   * 3. Fetches all evidence for that incident
+   * 4. Processes all evidence in batch
+   * 5. Generates a comprehensive casualty report
+   */
+  @Post('reports/:reportId/generate-casualty-report')
+  async generateCasualtyReport(@Param('reportId') reportId: string) {
+    const result =
+      await this.reportEnhancementService.generateCasualtyReport(reportId);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Comprehensive casualty report generated successfully',
+    };
+  }
+
+  /**
+   * Get generated casualty report by report ID
+   * This endpoint retrieves a previously generated casualty report from the database
+   */
+  @Get('reports/:reportId/casualty-report')
+  async getGeneratedCasualtyReport(@Param('reportId') reportId: string) {
+    const result =
+      await this.reportEnhancementService.getGeneratedCasualtyReport(reportId);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Generated casualty report retrieved successfully',
+    };
+  }
+
+  /**
    * Start a new conversation about a report
    */
   @Post('conversations/start')
