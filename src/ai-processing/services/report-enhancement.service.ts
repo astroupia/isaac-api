@@ -290,6 +290,97 @@ export class ReportEnhancementService {
   }
 
   /**
+   * Get all generated casualty reports with filtering and pagination
+   */
+  async getAllGeneratedCasualtyReports(options: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    incidentId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }): Promise<any> {
+    this.logger.log('Retrieving all generated casualty reports with filters');
+
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'generatedAt',
+      sortOrder = 'desc',
+      incidentId,
+      dateFrom,
+      dateTo,
+    } = options;
+
+    // Build query filter
+    const filter: any = {};
+
+    if (incidentId) {
+      filter.incidentId = ObjectIdUtils.convertToObjectId(incidentId);
+    }
+
+    if (dateFrom || dateTo) {
+      filter.generatedAt = {};
+      if (dateFrom) {
+        filter.generatedAt.$gte = dateFrom;
+      }
+      if (dateTo) {
+        filter.generatedAt.$lte = dateTo;
+      }
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Execute query with pagination
+    const [casualtyReports, totalCount] = await Promise.all([
+      this.generatedCasualtyReportModel
+        .find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .populate('reportId', 'title type status')
+        .populate(
+          'incidentId',
+          'incidentLocation incidentType incidentSeverity dateTime',
+        )
+        .exec(),
+      this.generatedCasualtyReportModel.countDocuments(filter).exec(),
+    ]);
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    return {
+      reports: casualtyReports,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNextPage,
+        hasPrevPage,
+        nextPage: hasNextPage ? page + 1 : null,
+        prevPage: hasPrevPage ? page - 1 : null,
+      },
+      filters: {
+        incidentId,
+        dateFrom,
+        dateTo,
+        sortBy,
+        sortOrder,
+      },
+    };
+  }
+
+  /**
    * Generate recommendations based on AI analysis
    */
   async generateRecommendations(reportId: string): Promise<any> {

@@ -339,6 +339,38 @@ export class AiProcessingController {
   }
 
   /**
+   * Get all generated casualty reports
+   * This endpoint retrieves all generated casualty reports with optional filtering
+   */
+  @Get('casualty-reports')
+  async getAllGeneratedCasualtyReports(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('incidentId') incidentId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    const result =
+      await this.reportEnhancementService.getAllGeneratedCasualtyReports({
+        page: page ? parseInt(page, 10) : 1,
+        limit: limit ? parseInt(limit, 10) : 10,
+        sortBy: sortBy || 'generatedAt',
+        sortOrder: sortOrder || 'desc',
+        incidentId,
+        dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+        dateTo: dateTo ? new Date(dateTo) : undefined,
+      });
+
+    return {
+      success: true,
+      data: result,
+      message: 'All generated casualty reports retrieved successfully',
+    };
+  }
+
+  /**
    * Start a new conversation about a report
    */
   @Post('conversations/start')
