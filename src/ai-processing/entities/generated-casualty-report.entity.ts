@@ -25,10 +25,10 @@ export class GeneratedCasualtyReport {
     totalCasualties: number;
     casualties: Array<{
       position: string;
-      confidence: number;
       location: string;
-      injurySeverity?: string;
-      injuries?: string[];
+      injurySeverity: string;
+      injuries: string[];
+      confidence: number;
     }>;
     injuryBreakdown: {
       fatalities: number;
@@ -42,28 +42,32 @@ export class GeneratedCasualtyReport {
     totalVehicles: number;
     vehicles: Array<{
       type: string;
-      confidence: number;
-      damage?: string[];
-      damageSeverity?: string;
-      color?: string;
-      position?: string;
       make?: string;
       model?: string;
       year?: number;
+      color?: string;
+      damage: string[];
+      damageSeverity: string;
+      position?: string;
+      licensePlate?: string;
+      estimatedSpeed?: string;
+      confidence: number;
     }>;
     damageAssessment: {
       vehicleDamage: Array<{
         vehicleId?: string;
         severity: string;
         areas: string[];
-        estimatedCost?: number;
+        description: string;
+        estimatedCost: string;
       }>;
       propertyDamage: Array<{
         type: string;
         severity: string;
         description: string;
+        estimatedCost: string;
       }>;
-      totalEstimatedCost?: string;
+      totalEstimatedCost: string;
     };
   };
 
@@ -72,6 +76,9 @@ export class GeneratedCasualtyReport {
     factors: string[];
     weatherConditions: string[];
     roadConditions: string[];
+    lightingConditions?: string;
+    roadType?: string;
+    trafficFlow?: string;
   };
 
   @Prop({ type: [Object], required: true })
