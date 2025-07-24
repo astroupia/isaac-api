@@ -11,7 +11,6 @@ import {
 } from '../entities/generated-casualty-report.entity';
 import { ReportService } from '../../report/services/report.service';
 import { EvidenceService } from '../../evidence/services/evidence.service';
-import { AiProcessingService } from './ai-processing.service';
 import { MediaAnalysisService } from './media-analysis.service';
 import { ObjectIdUtils } from '../../common/utils/objectid.utils';
 import { ReportStatus } from '../../types/report';
@@ -28,7 +27,6 @@ export class ReportEnhancementService {
     private generatedCasualtyReportModel: Model<GeneratedCasualtyReportDocument>,
     private reportService: ReportService,
     private evidenceService: EvidenceService,
-    private aiProcessingService: AiProcessingService,
     private mediaAnalysisService: MediaAnalysisService,
   ) {}
 
@@ -45,10 +43,26 @@ export class ReportEnhancementService {
     }
 
     // Get all AI analysis results for this report
+    this.logger.log(
+      `Searching for analysis results with reportId: ${reportId}`,
+    );
+
+    // Use the same approach as AiProcessingService for consistency
     const analysisResults = await this.aiAnalysisResultModel
-      .find({ reportId })
+      .find({ reportId: ObjectIdUtils.convertToObjectId(reportId) })
       .populate('evidenceId')
+      .sort({ createdAt: -1 })
       .exec();
+
+    this.logger.log(
+      `Found ${analysisResults.length} analysis results for reportId: ${reportId}`,
+    );
+
+    if (analysisResults.length === 0) {
+      throw new Error(
+        'No existing analysis results found for this report. Please generate analysis first.',
+      );
+    }
 
     // Generate comprehensive analysis
     const enhancement = await this.generateReportEnhancement(analysisResults);
@@ -77,67 +91,116 @@ export class ReportEnhancementService {
     reportId: string,
     customPrompt?: string,
   ): Promise<any> {
-    this.logger.log(`Enhancing report with custom prompt: ${reportId}`);
+    try {
+      this.logger.log(`Enhancing report with custom prompt: ${reportId}`);
 
-    // Get the report
-    const report = await this.reportService.findById(reportId);
-    if (!report) {
-      throw new Error('Report not found');
-    }
-
-    // Get all AI analysis results for this report
-    const analysisResults = await this.aiAnalysisResultModel
-      .find({ reportId })
-      .populate('evidenceId')
-      .exec();
-
-    if (analysisResults.length === 0) {
-      throw new Error(
-        'No existing analysis results found for this report. Please generate analysis first.',
-      );
-    }
-
-    // Update each analysis result with the custom prompt
-    const updatedAnalysisResults: any[] = [];
-    for (const analysis of analysisResults) {
-      if (customPrompt) {
-        // Update the analysis with the new prompt
-        const updatedAnalysis = await this.updateAnalysisWithPrompt(
-          analysis,
-          customPrompt,
-        );
-        updatedAnalysisResults.push(updatedAnalysis);
-      } else {
-        updatedAnalysisResults.push(analysis);
+      // Get the report
+      const report = await this.reportService.findById(reportId);
+      if (!report) {
+        throw new Error('Report not found');
       }
+
+      this.logger.log(`Found report: ${report._id}`);
+
+      // Get all AI analysis results for this report
+      this.logger.log(
+        `Searching for analysis results with reportId: ${reportId}`,
+      );
+
+      // Use the same approach as AiProcessingService for consistency
+      const analysisResults = await this.aiAnalysisResultModel
+        .find({ reportId: ObjectIdUtils.convertToObjectId(reportId) })
+        .populate('evidenceId')
+        .sort({ createdAt: -1 })
+        .exec();
+
+      this.logger.log(
+        `Found ${analysisResults.length} analysis results for reportId: ${reportId}`,
+      );
+
+      if (analysisResults.length === 0) {
+        throw new Error(
+          'No existing analysis results found for this report. Please generate analysis first.',
+        );
+      }
+
+      // Update each analysis result with the custom prompt
+      this.logger.log(`Updating ${analysisResults.length} analysis results`);
+      const updatedAnalysisResults: any[] = [];
+      for (const analysis of analysisResults) {
+        if (customPrompt) {
+          // Update the analysis with the new prompt
+          this.logger.log(
+            `Updating analysis ${analysis._id} with custom prompt`,
+          );
+          const updatedAnalysis = await this.updateAnalysisWithPrompt(
+            analysis,
+            customPrompt,
+          );
+          updatedAnalysisResults.push(updatedAnalysis);
+        } else {
+          updatedAnalysisResults.push(analysis);
+        }
+      }
+
+      this.logger.log(
+        `Successfully updated ${updatedAnalysisResults.length} analysis results`,
+      );
+
+      // Generate comprehensive analysis with updated results
+      this.logger.log('Generating report enhancement');
+      try {
+        const enhancement = await this.generateReportEnhancement(
+          updatedAnalysisResults,
+        );
+
+        this.logger.log('Report enhancement generated successfully');
+
+        // Update report with enhanced AI analysis
+        this.logger.log('Updating report with enhancement');
+        const updatedReport = await this.reportService.update(reportId, {
+          content: {
+            ...report.content,
+            aiEnhancement: enhancement,
+          },
+          aiContribution: enhancement.aiContribution,
+          aiOverallConfidence: enhancement.overallConfidence,
+          aiObjectDetection: enhancement.objectDetectionScore,
+          aiSceneReconstruction: enhancement.sceneReconstructionScore,
+          updatedAt: new Date(),
+        });
+
+        this.logger.log(
+          `Report enhanced successfully with custom prompt: ${reportId}`,
+        );
+        return {
+          report: updatedReport,
+          updatedAnalysisResults,
+          enhancement,
+        };
+      } catch (enhancementError) {
+        this.logger.error(
+          `Error generating enhancement: ${enhancementError instanceof Error ? enhancementError.message : 'Unknown error'}`,
+        );
+        // Return the updated analysis results even if enhancement fails
+        return {
+          report: report,
+          updatedAnalysisResults,
+          message:
+            'Analysis results updated successfully, but enhancement generation failed',
+          error:
+            enhancementError instanceof Error
+              ? enhancementError.message
+              : 'Unknown error',
+        };
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error in enhanceReportWithPrompt: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : '',
+      );
+      throw error;
     }
-
-    // Generate comprehensive analysis with updated results
-    const enhancement = await this.generateReportEnhancement(
-      updatedAnalysisResults,
-    );
-
-    // Update report with enhanced AI analysis
-    const updatedReport = await this.reportService.update(reportId, {
-      content: {
-        ...report.content,
-        aiEnhancement: enhancement,
-      },
-      aiContribution: enhancement.aiContribution,
-      aiOverallConfidence: enhancement.overallConfidence,
-      aiObjectDetection: enhancement.objectDetectionScore,
-      aiSceneReconstruction: enhancement.sceneReconstructionScore,
-      updatedAt: new Date(),
-    });
-
-    this.logger.log(
-      `Report enhanced successfully with custom prompt: ${reportId}`,
-    );
-    return {
-      report: updatedReport,
-      updatedAnalysisResults,
-      enhancement,
-    };
   }
 
   /**
@@ -149,41 +212,13 @@ export class ReportEnhancementService {
   ): Promise<any> {
     this.logger.log(`Updating analysis ${analysis._id} with custom prompt`);
 
-    // Get the evidence for this analysis
-    const evidence = await this.evidenceService.findById(
-      analysis.evidenceId.toString(),
-    );
-    if (!evidence) {
-      this.logger.warn(`Evidence not found for analysis ${analysis._id}`);
-      return analysis;
-    }
-
     try {
-      // Re-analyze the evidence with the custom prompt
-      const updatedAnalysisResult =
-        await this.aiProcessingService.processEvidence(
-          analysis.evidenceId.toString(),
-          evidence.type as EvidenceType,
-          evidence.fileUrl || '',
-          customPrompt,
-          analysis.reportId?.toString(),
-          analysis.incidentId?.toString(),
-        );
-
-      // Update the existing analysis record
+      // Update the existing analysis record with the new prompt
       const updatedAnalysis =
         await this.aiAnalysisResultModel.findByIdAndUpdate(
           analysis._id,
           {
             prompt: customPrompt,
-            analysisResult: updatedAnalysisResult.analysisResult,
-            confidenceScore: updatedAnalysisResult.confidenceScore,
-            detectedObjects: updatedAnalysisResult.detectedObjects,
-            sceneAnalysis: updatedAnalysisResult.sceneAnalysis,
-            damageAssessment: updatedAnalysisResult.damageAssessment,
-            recommendations: updatedAnalysisResult.recommendations,
-            processingTime: updatedAnalysisResult.processingTime,
-            tokensUsed: updatedAnalysisResult.tokensUsed,
             updatedAt: new Date(),
           },
           { new: true },
@@ -841,7 +876,7 @@ export class ReportEnhancementService {
     let score = 0;
     let count = 0;
 
-    if (detectedObjects.vehicles) {
+    if (detectedObjects?.vehicles && detectedObjects.vehicles.length > 0) {
       const vehicleConfidence =
         detectedObjects.vehicles
           .map((v) => v.confidence || 0)
@@ -850,7 +885,7 @@ export class ReportEnhancementService {
       count++;
     }
 
-    if (detectedObjects.persons) {
+    if (detectedObjects?.persons && detectedObjects.persons.length > 0) {
       const personConfidence =
         detectedObjects.persons
           .map((p) => p.confidence || 0)
@@ -859,7 +894,7 @@ export class ReportEnhancementService {
       count++;
     }
 
-    if (detectedObjects.roadSigns) {
+    if (detectedObjects?.roadSigns && detectedObjects.roadSigns.length > 0) {
       const signConfidence =
         detectedObjects.roadSigns
           .map((s) => s.confidence || 0)
