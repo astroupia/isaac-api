@@ -15,6 +15,7 @@ import { AiProcessingService } from './ai-processing.service';
 import { MediaAnalysisService } from './media-analysis.service';
 import { ObjectIdUtils } from '../../common/utils/objectid.utils';
 import { ReportStatus } from '../../types/report';
+import { EvidenceType } from '../../types/evidence';
 
 @Injectable()
 export class ReportEnhancementService {
@@ -67,6 +68,138 @@ export class ReportEnhancementService {
 
     this.logger.log(`Report enhanced successfully: ${reportId}`);
     return updatedReport;
+  }
+
+  /**
+   * Enhance report with custom prompt - updates existing analysis results
+   */
+  async enhanceReportWithPrompt(
+    reportId: string,
+    customPrompt?: string,
+  ): Promise<any> {
+    this.logger.log(`Enhancing report with custom prompt: ${reportId}`);
+
+    // Get the report
+    const report = await this.reportService.findById(reportId);
+    if (!report) {
+      throw new Error('Report not found');
+    }
+
+    // Get all AI analysis results for this report
+    const analysisResults = await this.aiAnalysisResultModel
+      .find({ reportId })
+      .populate('evidenceId')
+      .exec();
+
+    if (analysisResults.length === 0) {
+      throw new Error(
+        'No existing analysis results found for this report. Please generate analysis first.',
+      );
+    }
+
+    // Update each analysis result with the custom prompt
+    const updatedAnalysisResults: any[] = [];
+    for (const analysis of analysisResults) {
+      if (customPrompt) {
+        // Update the analysis with the new prompt
+        const updatedAnalysis = await this.updateAnalysisWithPrompt(
+          analysis,
+          customPrompt,
+        );
+        updatedAnalysisResults.push(updatedAnalysis);
+      } else {
+        updatedAnalysisResults.push(analysis);
+      }
+    }
+
+    // Generate comprehensive analysis with updated results
+    const enhancement = await this.generateReportEnhancement(
+      updatedAnalysisResults,
+    );
+
+    // Update report with enhanced AI analysis
+    const updatedReport = await this.reportService.update(reportId, {
+      content: {
+        ...report.content,
+        aiEnhancement: enhancement,
+      },
+      aiContribution: enhancement.aiContribution,
+      aiOverallConfidence: enhancement.overallConfidence,
+      aiObjectDetection: enhancement.objectDetectionScore,
+      aiSceneReconstruction: enhancement.sceneReconstructionScore,
+      updatedAt: new Date(),
+    });
+
+    this.logger.log(
+      `Report enhanced successfully with custom prompt: ${reportId}`,
+    );
+    return {
+      report: updatedReport,
+      updatedAnalysisResults,
+      enhancement,
+    };
+  }
+
+  /**
+   * Update existing analysis with custom prompt
+   */
+  private async updateAnalysisWithPrompt(
+    analysis: any,
+    customPrompt: string,
+  ): Promise<any> {
+    this.logger.log(`Updating analysis ${analysis._id} with custom prompt`);
+
+    // Get the evidence for this analysis
+    const evidence = await this.evidenceService.findById(
+      analysis.evidenceId.toString(),
+    );
+    if (!evidence) {
+      this.logger.warn(`Evidence not found for analysis ${analysis._id}`);
+      return analysis;
+    }
+
+    try {
+      // Re-analyze the evidence with the custom prompt
+      const updatedAnalysisResult =
+        await this.aiProcessingService.processEvidence(
+          analysis.evidenceId.toString(),
+          evidence.type as EvidenceType,
+          evidence.fileUrl || '',
+          customPrompt,
+          analysis.reportId?.toString(),
+          analysis.incidentId?.toString(),
+        );
+
+      // Update the existing analysis record
+      const updatedAnalysis =
+        await this.aiAnalysisResultModel.findByIdAndUpdate(
+          analysis._id,
+          {
+            prompt: customPrompt,
+            analysisResult: updatedAnalysisResult.analysisResult,
+            confidenceScore: updatedAnalysisResult.confidenceScore,
+            detectedObjects: updatedAnalysisResult.detectedObjects,
+            sceneAnalysis: updatedAnalysisResult.sceneAnalysis,
+            damageAssessment: updatedAnalysisResult.damageAssessment,
+            recommendations: updatedAnalysisResult.recommendations,
+            processingTime: updatedAnalysisResult.processingTime,
+            tokensUsed: updatedAnalysisResult.tokensUsed,
+            updatedAt: new Date(),
+          },
+          { new: true },
+        );
+
+      this.logger.log(
+        `Analysis ${analysis._id} updated successfully with custom prompt`,
+      );
+      return updatedAnalysis;
+    } catch (error) {
+      this.logger.error(
+        `Failed to update analysis ${analysis._id} with custom prompt:`,
+        error,
+      );
+      return analysis; // Return original analysis if update fails
+    }
   }
 
   /**

@@ -53,6 +53,10 @@ interface SendMessageDto {
   }>;
 }
 
+interface EnhanceReportDto {
+  customPrompt?: string;
+}
+
 @Controller('ai-processing')
 export class AiProcessingController {
   constructor(
@@ -223,16 +227,22 @@ export class AiProcessingController {
   }
 
   /**
-   * Enhance report with AI analysis
+   * Enhance report with AI analysis using custom prompt
    */
-  @Post('reports/:reportId/enhance')
-  async enhanceReport(@Param('reportId') reportId: string) {
-    const result = await this.reportEnhancementService.enhanceReport(reportId);
+  @Put('reports/:reportId/enhance')
+  async enhanceReport(
+    @Param('reportId') reportId: string,
+    @Body() dto: EnhanceReportDto,
+  ) {
+    const result = await this.reportEnhancementService.enhanceReportWithPrompt(
+      reportId,
+      dto.customPrompt,
+    );
 
     return {
       success: true,
       data: result,
-      message: 'Report enhanced successfully with AI analysis',
+      message: 'Report enhanced successfully with custom prompt',
     };
   }
 
@@ -248,6 +258,21 @@ export class AiProcessingController {
       success: true,
       data: results,
       message: 'Report analysis results retrieved successfully',
+    };
+  }
+
+  /**
+   * Get AI analysis results by report ID
+   */
+  @Get('reports/:reportId/ai-analysis')
+  async getAiAnalysisResults(@Param('reportId') reportId: string) {
+    const results =
+      await this.aiProcessingService.getReportAnalysisResults(reportId);
+
+    return {
+      success: true,
+      data: results,
+      message: 'AI analysis results retrieved successfully',
     };
   }
 
